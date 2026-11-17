@@ -39,6 +39,7 @@ var configFieldDocs = map[string]string{
 	"Config.Tuning":               "Holds performance settings that rarely need changing.",
 	"Config.UnixSocket":           "Where the server serves the API without authentication, for the CLI on the same host. The CLI connects to it when `cli.address` is empty.",
 	"Config.UnixSocketPermission": "The file mode of `unix_socket`, in quoted octal (`\"0770\"`): unquoted, YAML reads `0770` as the number 504.",
+	"Config.Web":                  "The look of the pages headscale serves to browsers: the client setup pages, the registration and OpenID Connect login pages, and `/`. See [Branding](https://headscale.net/stable/ref/branding/).",
 	"DERPConfig.AutoUpdate":       "Reloads `derp.urls` and `derp.paths` every `derp.update_frequency`.",
 	"DERPConfig.Paths":            "DERP map files. The extension picks the format: `.yaml` or `.yml`, or Tailscale JSON as `.json` or `.hujson`, both accepting comments and trailing commas.",
 	"DERPConfig.Server":           "The embedded DERP server, a relay and STUN server run by headscale itself. See [Enable embedded DERP](https://headscale.net/stable/ref/derp/#enable-embedded-derp).",
@@ -130,6 +131,19 @@ var configFieldDocs = map[string]string{
 	"Tuning.NodeStoreBatchTimeout":                        "The longest a partial batch of node changes waits before the rebuild; must be positive. Lower values answer single changes faster at the cost of more rebuilds.",
 	"Tuning.RegisterCacheExpiration":                      "How long a pending registration waits to be completed. Zero uses the default.",
 	"Tuning.RegisterCacheMaxEntries":                      "Bounds pending registrations. At capacity, new registrations are refused without evicting pending ones; SSH checks have a small reserve beyond it. Zero uses the default. See [Pending authentication limits](https://headscale.net/stable/ref/registration/#pending-authentication-limits).",
+	"WebConfig.StaticDir":                                 "A directory served under `/static/`, relative to the configuration file. A file named like a built-in one, such as `style.css`, `headscale.svg` or `favicon.png`, replaces it. Files are read on each request. Empty serves only the built-in files.",
+	"WebConfig.TemplatesDir":                              "A directory of Go html/template files, relative to the configuration file. A file named like a built-in template, such as `layout.html` or `apple.html`, replaces it; any other `.html` file is loaded into every page, where it can redefine a block of the layout. Read at startup and again on SIGHUP. Empty uses the built-in templates.",
+	"WebConfig.Theme":                                     "The name, logo, colours and fonts of the pages, set without writing templates.",
+	"WebThemeConfig.CodeFontFamily":                       "The CSS font list for commands and code. Empty uses Roboto Mono, then system monospace fonts.",
+	"WebThemeConfig.FontFamily":                           "The CSS font list for text, as in `\"Inter\", sans-serif`. Empty uses Roboto, then system fonts.",
+	"WebThemeConfig.FontStylesheets":                      "The stylesheets that load the fonts, before the page's own styles. The default loads Roboto and Roboto Mono from Google Fonts; `[]` loads none, and the pages fall back to system fonts unless `web.theme.font_family` names fonts the browser has.",
+	"WebThemeConfig.FooterText":                           "A line of plain text shown at the bottom of every page, above the \"Powered by Headscale\" link.",
+	"WebThemeConfig.HidePoweredBy":                        "Removes the \"Powered by Headscale\" link from the footer.",
+	"WebThemeConfig.Logo":                                 "The image at the top of every page: an `http://` or `https://` URL, or a path on this server such as a file in `web.static_dir`. Empty shows no logo.",
+	"WebThemeConfig.Name":                                 "The product name in page titles, page text, the footer and the Apple configuration profile.",
+	"WebThemeConfig.PrimaryColor":                         "The colour of links, buttons and focus rings, as `#rrggbb`. Empty keeps the built-in blue.",
+	"WebThemeConfig.PrimaryColorDark":                     "Replaces `web.theme.primary_color` when the browser asks for a dark colour scheme. Empty uses `web.theme.primary_color`.",
+	"WebThemeConfig.Stylesheets":                          "Extra stylesheets loaded after the built-in one, so their rules win: an `http://` or `https://` URL, or a path on this server such as a file in `web.static_dir`.",
 }
 
 var configValueDocs = map[string]string{

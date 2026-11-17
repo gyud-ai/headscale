@@ -3128,6 +3128,394 @@ Makes auto-update the default for clients that have not chosen locally. Clients 
     services.headscale.settings.auto_update.enabled = true;
     ```
 
+## `web` { #web data-toc-label="web" }
+
+The look of the pages headscale serves to browsers: the client setup pages, the registration and OpenID Connect login pages, and `/`. See [Branding](branding.md).
+
+??? example "All `web` keys and defaults"
+
+    ```yaml
+    web:
+      templates_dir: ""
+      static_dir: ""
+      theme:
+        name: Headscale
+        logo: /static/headscale.svg
+        primary_color: ""
+        primary_color_dark: ""
+        font_stylesheets:
+          - https://fonts.googleapis.com/css2?family=Roboto:wght@300..700
+          - https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap
+        font_family: ""
+        code_font_family: ""
+        stylesheets: []
+        footer_text: ""
+        hide_powered_by: false
+    ```
+
+### `web.templates_dir` { #web.templates_dir data-toc-label="templates_dir" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_TEMPLATES_DIR`
+
+A directory of Go html/template files, relative to the configuration file. A file named like a built-in template, such as `layout.html` or `apple.html`, replaces it; any other `.html` file is loaded into every page, where it can redefine a block of the layout. Read at startup and again on SIGHUP. Empty uses the built-in templates.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      templates_dir: /etc/headscale/web/templates
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEMPLATES_DIR=/etc/headscale/web/templates
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.templates_dir = "/etc/headscale/web/templates";
+    ```
+
+### `web.static_dir` { #web.static_dir data-toc-label="static_dir" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_STATIC_DIR`
+
+A directory served under `/static/`, relative to the configuration file. A file named like a built-in one, such as `style.css`, `headscale.svg` or `favicon.png`, replaces it. Files are read on each request. Empty serves only the built-in files.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      static_dir: /etc/headscale/web/static
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_STATIC_DIR=/etc/headscale/web/static
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.static_dir = "/etc/headscale/web/static";
+    ```
+
+### `web.theme` { #web.theme data-toc-label="theme" }
+
+The name, logo, colours and fonts of the pages, set without writing templates.
+
+??? example "All `web.theme` keys and defaults"
+
+    ```yaml
+    web:
+      theme:
+        name: Headscale
+        logo: /static/headscale.svg
+        primary_color: ""
+        primary_color_dark: ""
+        font_stylesheets:
+          - https://fonts.googleapis.com/css2?family=Roboto:wght@300..700
+          - https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap
+        font_family: ""
+        code_font_family: ""
+        stylesheets: []
+        footer_text: ""
+        hide_powered_by: false
+    ```
+
+#### `web.theme.name` { #web.theme.name data-toc-label="name" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Headscale`
+- **Env:** `HEADSCALE_WEB_THEME_NAME`
+
+The product name in page titles, page text, the footer and the Apple configuration profile.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        name: Example VPN
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_NAME='Example VPN'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.name = "Example VPN";
+    ```
+
+#### `web.theme.logo` { #web.theme.logo data-toc-label="logo" }
+
+- **Type:** [string](#type-string)
+- **Default:** `/static/headscale.svg`
+- **Env:** `HEADSCALE_WEB_THEME_LOGO`
+
+The image at the top of every page: an `http://` or `https://` URL, or a path on this server such as a file in [`web.static_dir`](#web.static_dir). Empty shows no logo.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        logo: /static/logo.svg
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_LOGO=/static/logo.svg
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.logo = "/static/logo.svg";
+    ```
+
+#### `web.theme.primary_color` { #web.theme.primary_color data-toc-label="primary_color" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_THEME_PRIMARY_COLOR`
+
+The colour of links, buttons and focus rings, as `#rrggbb`. Empty keeps the built-in blue.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        primary_color: '#0a7d5a'
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_PRIMARY_COLOR='#0a7d5a'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.primary_color = "#0a7d5a";
+    ```
+
+#### `web.theme.primary_color_dark` { #web.theme.primary_color_dark data-toc-label="primary_color_dark" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_THEME_PRIMARY_COLOR_DARK`
+
+Replaces [`web.theme.primary_color`](#web.theme.primary_color) when the browser asks for a dark colour scheme. Empty uses [`web.theme.primary_color`](#web.theme.primary_color).
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        primary_color_dark: '#4fd1a5'
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_PRIMARY_COLOR_DARK='#4fd1a5'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.primary_color_dark = "#4fd1a5";
+    ```
+
+#### `web.theme.font_stylesheets` { #web.theme.font_stylesheets data-toc-label="font_stylesheets" }
+
+- **Type:** [list of strings](#type-list)
+- **Default:** `['https://fonts.googleapis.com/css2?family=Roboto:wght@300..700', 'https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap']`
+- **Env:** `HEADSCALE_WEB_THEME_FONT_STYLESHEETS` ([space-separated or JSON array](#env))
+
+The stylesheets that load the fonts, before the page's own styles. The default loads Roboto and Roboto Mono from Google Fonts; `[]` loads none, and the pages fall back to system fonts unless [`web.theme.font_family`](#web.theme.font_family) names fonts the browser has.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        font_stylesheets:
+          - /static/fonts/inter.css
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_FONT_STYLESHEETS='["/static/fonts/inter.css"]'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.font_stylesheets = [
+      "/static/fonts/inter.css"
+    ];
+    ```
+
+#### `web.theme.font_family` { #web.theme.font_family data-toc-label="font_family" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_THEME_FONT_FAMILY`
+
+The CSS font list for text, as in `"Inter", sans-serif`. Empty uses Roboto, then system fonts.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        font_family: '"Inter", sans-serif'
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_FONT_FAMILY='"Inter", sans-serif'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.font_family = "\"Inter\", sans-serif";
+    ```
+
+#### `web.theme.code_font_family` { #web.theme.code_font_family data-toc-label="code_font_family" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_THEME_CODE_FONT_FAMILY`
+
+The CSS font list for commands and code. Empty uses Roboto Mono, then system monospace fonts.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        code_font_family: '"JetBrains Mono", monospace'
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_CODE_FONT_FAMILY='"JetBrains Mono", monospace'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.code_font_family = "\"JetBrains Mono\", monospace";
+    ```
+
+#### `web.theme.stylesheets` { #web.theme.stylesheets data-toc-label="stylesheets" }
+
+- **Type:** [list of strings](#type-list)
+- **Default:** `[]`
+- **Env:** `HEADSCALE_WEB_THEME_STYLESHEETS` ([space-separated or JSON array](#env))
+
+Extra stylesheets loaded after the built-in one, so their rules win: an `http://` or `https://` URL, or a path on this server such as a file in [`web.static_dir`](#web.static_dir).
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        stylesheets:
+          - /static/brand.css
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_STYLESHEETS='["/static/brand.css"]'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.stylesheets = [
+      "/static/brand.css"
+    ];
+    ```
+
+#### `web.theme.footer_text` { #web.theme.footer_text data-toc-label="footer_text" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_THEME_FOOTER_TEXT`
+
+A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        footer_text: Operated by the Example IT team
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_FOOTER_TEXT='Operated by the Example IT team'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.footer_text = "Operated by the Example IT team";
+    ```
+
+#### `web.theme.hide_powered_by` { #web.theme.hide_powered_by data-toc-label="hide_powered_by" }
+
+- **Type:** [boolean](#type-boolean)
+- **Default:** `false`
+- **Env:** `HEADSCALE_WEB_THEME_HIDE_POWERED_BY`
+
+Removes the "Powered by Headscale" link from the footer.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        hide_powered_by: true
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_HIDE_POWERED_BY=true
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.hide_powered_by = true;
+    ```
+
 ## `cli` { #cli data-toc-label="cli" }
 
 How the headscale CLI reaches the server: the local [`unix_socket`](#unix_socket) without authentication, or a remote [`cli.address`](#cli.address) with [`cli.api_key`](#cli.api_key). The CLI reads these keys from its own configuration, such as `~/.config/headscale/config.yaml`, or from `HEADSCALE_CLI_*` variables; the server does not read them, so on NixOS they do not belong in `services.headscale.settings`. See [Remote control](api.md#remote-control).

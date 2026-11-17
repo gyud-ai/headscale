@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"maps"
 	"net"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	apiv1 "github.com/juanfont/headscale/hscontrol/api/v1"
 	"github.com/juanfont/headscale/hscontrol/config"
+	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -430,4 +432,44 @@ func TestReleaseStamp(t *testing.T) {
 			assert.Equal(t, &tt.info, got)
 		})
 	}
+}
+
+// TestGenerateWeb: the files written are the built-in ones, they load as a
+// web.templates_dir and web.static_dir, and a second run writes nothing.
+func TestGenerateWeb(t *testing.T) {
+	dir := t.TempDir()
+
+	var out strings.Builder
+	require.NoError(t, writeWebFiles(&out, dir))
+
+	for _, name := range []string{"templates/layout.html", "templates/apple.html", "static/style.css", "static/favicon.png"} {
+		assert.Contains(t, out.String(), filepath.Join(dir, name))
+		assert.FileExists(t, filepath.Join(dir, name))
+	}
+
+	layout, err := os.ReadFile(filepath.Join(dir, "templates", "layout.html"))
+	require.NoError(t, err)
+
+	builtin, err := fs.ReadFile(templates.Builtin(), "layout.html")
+	require.NoError(t, err)
+	assert.Equal(t, builtin, layout)
+
+	_, err = templates.New(&types.Config{Web: types.WebConfig{
+		TemplatesDir: filepath.Join(dir, "templates"),
+		StaticDir:    filepath.Join(dir, "static"),
+		Theme:        types.DefaultWebTheme(),
+	}})
+	require.NoError(t, err)
+
+	// Change one file; a second run must not overwrite it or anything else.
+	custom := filepath.Join(dir, "templates", "windows.html")
+	require.NoError(t, os.WriteFile(custom, []byte("custom"), 0o600))
+
+	out.Reset()
+	require.ErrorIs(t, writeWebFiles(&out, dir), errWebExists)
+	assert.Empty(t, out.String())
+
+	got, err := os.ReadFile(custom)
+	require.NoError(t, err)
+	assert.Equal(t, "custom", string(got))
 }

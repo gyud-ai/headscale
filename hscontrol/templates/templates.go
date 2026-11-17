@@ -214,16 +214,36 @@ type loadedFiles struct {
 	partials  []string
 }
 
+// builtinPages are the pages without web.templates_dir, parsed once: they
+// do not change, and every server, every test server included, uses them.
+var builtinPages = sync.OnceValues(func() (pageSet, error) {
+	pages, _, err := parsePages(&Site{}, nil, "")
+
+	return pages, err
+})
+
 // loadPages parses every page: the built-in base files, then the partials
 // of dir, then the page, each file read from dir when it is there. Each
 // page is then rendered with its samples.
 func loadPages(site *Site, dir string) (pageSet, loadedFiles, error) {
-	var loaded loadedFiles
+	if dir == "" {
+		pages, err := builtinPages()
+
+		return pages, loadedFiles{}, err
+	}
 
 	custom, err := readTemplatesDir(dir)
 	if err != nil {
-		return nil, loaded, fmt.Errorf("web.templates_dir: %w", err)
+		return nil, loadedFiles{}, fmt.Errorf("web.templates_dir: %w", err)
 	}
+
+	return parsePages(site, custom, dir)
+}
+
+// parsePages parses every page, reading a file from custom, the files of
+// dir by name, when it is there and from the built-in files otherwise.
+func parsePages(site *Site, custom map[string]string, dir string) (pageSet, loadedFiles, error) {
+	var loaded loadedFiles
 
 	pageNames := slices.Sorted(maps.Keys(samples))
 

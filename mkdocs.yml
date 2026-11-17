@@ -193,6 +193,7 @@ nav:
       - DERP: ref/derp.md
       - API: ref/api.md
       - Tags: ref/tags.md
+      - Branding: ref/branding.md
       - Debug: ref/debug.md
       - Integration:
           - Reverse proxy: ref/integration/reverse-proxy.md

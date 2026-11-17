@@ -59,6 +59,7 @@ type serverConfig struct {
 	dnsResolvers          []string
 	certProvider          hsdns.Provider
 	prefixV4              netip.Prefix
+	web                   *types.WebConfig
 }
 
 func defaultServerConfig() *serverConfig {
@@ -144,6 +145,12 @@ func WithDNSResolvers(addrs ...string) ServerOption {
 	return func(c *serverConfig) { c.dnsResolvers = addrs }
 }
 
+// WithWeb sets the web section: the templates, static files and theme of
+// the pages the server serves to browsers.
+func WithWeb(web types.WebConfig) ServerOption {
+	return func(c *serverConfig) { c.web = &web }
+}
+
 // WithLogTailEnabled sets logtail.enabled, so the server leaves client log
 // uploads alone instead of telling clients to disable them.
 func WithLogTailEnabled() ServerOption {
@@ -178,6 +185,10 @@ func NewServer(tb testing.TB, opts ...ServerOption) *TestServer {
 	cfg.Policy.Mode = types.PolicyModeDB
 	cfg.Taildrop.Enabled = sc.taildropEnabled
 	cfg.LogTail.Enabled = sc.logTailEnabled
+
+	if sc.web != nil {
+		cfg.Web = *sc.web
+	}
 	cfg.Tuning.BatchChangeDelay = sc.batchDelay
 	cfg.Tuning.BatcherWorkers = sc.batcherWorkers
 	cfg.Tuning.NodeMapSessionBufferedChanSize = sc.bufferedChanSize

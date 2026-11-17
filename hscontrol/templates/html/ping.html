@@ -1,0 +1,58 @@
+{{- /*
+  ping is /debug/ping on metrics_listen_addr. .Page has Query, the node
+  asked for; Result, nil before a ping, else Status ("ok", "timeout" or
+  "error"), Latency, NodeID and Message; and Nodes, the connected nodes,
+  each with ID, Hostname and IPs.
+*/ -}}
+{{template "layout" .}}
+{{- define "title"}}Ping Node - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<h1>Ping Node</h1>
+<p>Check if a connected node responds to a PingRequest.</p>
+<details class="hs-details">
+<summary>How does this work?</summary>
+<div>
+<ol>
+<li>The server sends a PingRequest to the target node via its MapResponse stream.</li>
+<li>The node's Tailscale client receives the request and responds back to the server.</li>
+<li>The server measures the round-trip latency from send to callback.</li>
+<li>If no response arrives within 30 seconds, the ping times out.</li>
+</ol>
+<p>This tests the <strong>full control plane path</strong> — map stream delivery, client processing, and network connectivity back to the server. It does not test ICMP or WireGuard tunnel connectivity.</p>
+</div>
+</details>
+<form class="hs-inline-form" method="POST" action="/debug/ping">
+<input type="text" name="node" value="{{.Page.Query}}" placeholder="Node ID, IP, or hostname" autofocus>
+<button type="submit">Ping</button>
+</form>
+{{- with .Page.Result}}
+<div class="hs-section">
+{{- if eq .Status "ok"}}
+<div class="hs-box hs-box--success" role="status" aria-live="polite">
+{{template "icon_success"}}
+<div><strong class="hs-box__heading">Pong</strong>Node {{.NodeID}} responded in {{.Latency}}</div>
+</div>
+{{- else if eq .Status "timeout"}}
+<div class="hs-box hs-box--warning" role="note">
+{{template "icon_warning"}}
+<div><strong class="hs-box__heading">Timeout</strong><div>Node {{.NodeID}} did not respond. {{.Message}}</div></div>
+</div>
+{{- else}}
+<div class="hs-box hs-box--warning" role="note">
+{{template "icon_warning"}}
+<div><strong class="hs-box__heading">Error</strong><div>{{.Message}}</div></div>
+</div>
+{{- end}}
+</div>
+{{- end}}
+{{- with .Page.Nodes}}
+<div class="hs-section">
+<h2>Connected Nodes</h2>
+<ul>
+{{- range .}}
+<li><a href="/debug/ping?node={{.ID}}">{{.Hostname}} (ID: {{.ID}}, {{join .IPs ", "}})</a></li>
+{{- end}}
+</ul>
+</div>
+{{- end}}
+{{- end}}

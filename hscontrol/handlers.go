@@ -1,16 +1,13 @@
 package hscontrol
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/juanfont/headscale/hscontrol/assets"
 	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/juanfont/headscale/hscontrol/util/zlog/zf"
@@ -61,12 +58,13 @@ func httpError(w http.ResponseWriter, err error) {
 	}
 }
 
-// httpUserError logs an error and sends a styled HTML error page.
-// Use this for browser-facing error paths (OIDC, registration confirm)
-// where the user should see a branded page instead of plain text.
-// Technical details go to the server log; the HTML page only shows
-// an actionable message derived from the HTTP status code.
-func httpUserError(w http.ResponseWriter, err error) {
+// httpUserError logs an error and sends a styled HTML error page,
+// rendered by pages (nil for the built-in one). Use this for
+// browser-facing error paths (OIDC, registration confirm) where the user
+// should see a branded page instead of plain text. Technical details go
+// to the server log; the HTML page only shows an actionable message
+// derived from the HTTP status code.
+func httpUserError(w http.ResponseWriter, pages *templates.Renderer, err error) {
 	code := http.StatusInternalServerError
 	userMsg := ""
 
@@ -88,18 +86,32 @@ func httpUserError(w http.ResponseWriter, err error) {
 		userMsg = userMessageForStatusCode(code)
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(code)
-
-	page := templates.AuthError(templates.AuthErrorResult{
-		Title:   "Headscale - Error",
+	writePage(w, code)(pages.AuthError(templates.AuthErrorResult{
+		Title:   "Error",
 		Heading: http.StatusText(code),
 		Message: userMsg,
-	})
+	}))
+}
 
-	_, werr := w.Write([]byte(page.Render()))
-	if werr != nil {
-		log.Error().Err(werr).Msg("failed to write HTML error response")
+// writePage returns a function that writes a rendered page with status,
+// or a plain 500 when rendering failed: writePage(w, 200)(pages.Apple()).
+// Headers set before it are kept.
+func writePage(w http.ResponseWriter, status int) func([]byte, error) {
+	return func(page []byte, err error) {
+		if err != nil {
+			log.Error().Err(err).Msg("rendering web page")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(status)
+
+		_, err = w.Write(page) //nolint:gosec // G705: html/template escaped every value in page
+		if err != nil {
+			log.Error().Err(err).Msg("writing web page")
+		}
 	}
 }
 
@@ -326,11 +338,15 @@ func (h *Headscale) VersionHandler(
 
 type AuthProviderWeb struct {
 	serverURL string
+	pages     *templates.Renderer
 }
 
-func NewAuthProviderWeb(serverURL string) *AuthProviderWeb {
+// NewAuthProviderWeb returns the auth provider without OpenID Connect.
+// Its pages are rendered by the given renderer, nil for the built-in ones.
+func NewAuthProviderWeb(serverURL string, pages *templates.Renderer) *AuthProviderWeb {
 	return &AuthProviderWeb{
 		serverURL: serverURL,
+		pages:     pages,
 	}
 }
 
@@ -358,17 +374,11 @@ func (a *AuthProviderWeb) AuthHandler(
 		return
 	}
 
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-
-	_, err = writer.Write([]byte(templates.AuthWeb(
-		"Authentication check",
-		"Run the command below in the headscale server to approve this authentication request:",
-		"headscale auth approve --auth-id "+authID.String(),
-	).Render()))
-	if err != nil {
-		log.Error().Err(err).Msg("failed to write auth response")
-	}
+	writePage(writer, http.StatusOK)(a.pages.AuthWeb(templates.AuthWebData{
+		Title:       "Authentication check",
+		Description: "Run the command below in the headscale server to approve this authentication request:",
+		Command:     "headscale auth approve --auth-id " + authID.String(),
+	}))
 }
 
 func authIDFromRequest(req *http.Request) (types.AuthID, error) {
@@ -400,34 +410,15 @@ func (a *AuthProviderWeb) RegisterHandler(
 		return
 	}
 
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-
-	_, err = writer.Write([]byte(templates.AuthWeb(
-		"Node registration",
-		"Run the command below in the headscale server to add this node to your network:",
-		fmt.Sprintf("headscale auth register --auth-id %s --user USERNAME", authId.String()),
-	).Render()))
-	if err != nil {
-		log.Error().Err(err).Msg("failed to write register response")
-	}
+	writePage(writer, http.StatusOK)(a.pages.AuthWeb(templates.AuthWebData{
+		Title:       "Node registration",
+		Description: "Run the command below in the headscale server to add this node to your network:",
+		Command:     fmt.Sprintf("headscale auth register --auth-id %s --user USERNAME", authId.String()),
+	}))
 }
 
-func FaviconHandler(writer http.ResponseWriter, req *http.Request) {
-	writer.Header().Set("Content-Type", "image/png")
-	http.ServeContent(writer, req, "favicon.ico", time.Unix(0, 0), bytes.NewReader(assets.Favicon))
-}
-
-// BlankHandler returns a blank page with favicon linked.
-func BlankHandler(writer http.ResponseWriter, res *http.Request) {
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-
-	_, err := writer.Write([]byte(templates.BlankPage().Render()))
-	if err != nil {
-		log.Error().
-			Caller().
-			Err(err).
-			Msg("Failed to write HTTP response")
-	}
+// BlankHandler serves /: by default a blank page that only sets the
+// favicon, or blank.html of web.templates_dir.
+func (h *Headscale) BlankHandler(writer http.ResponseWriter, _ *http.Request) {
+	writePage(writer, http.StatusOK)(h.pages.Blank())
 }

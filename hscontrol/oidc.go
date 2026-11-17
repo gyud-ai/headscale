@@ -1,7 +1,6 @@
 package hscontrol
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -84,6 +83,16 @@ type AuthProviderOIDC struct {
 
 	oidcProvider *oidc.Provider
 	oauth2Config *oauth2.Config
+}
+
+// pages is the server's renderer; nil, the built-in pages, for a
+// provider built without one.
+func (a *AuthProviderOIDC) pages() *templates.Renderer {
+	if a.h == nil {
+		return nil
+	}
+
+	return a.h.pages
 }
 
 func NewAuthProviderOIDC(
@@ -184,23 +193,23 @@ func (a *AuthProviderOIDC) authHandler(
 ) {
 	authID, err := authIDFromRequest(req)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 		return
 	}
 
 	authReq, ok := a.h.state.GetAuthCacheEntry(authID)
 	if !ok {
-		httpUserError(writer, NewHTTPError(http.StatusGone, "login session expired, try again", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusGone, "login session expired, try again", nil))
 		return
 	}
 
 	if registration && !authReq.IsRegistration() {
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "auth session is not for node registration", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "auth session is not for node registration", nil))
 		return
 	}
 
 	if !registration && !authReq.IsSSHCheck() {
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "auth session is not for SSH check", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "auth session is not for SSH check", nil))
 		return
 	}
 
@@ -244,7 +253,7 @@ func (a *AuthProviderOIDC) authHandler(
 
 	if !a.addAuthInfoToState(state, registrationInfo) {
 		writer.Header().Set("Retry-After", "10")
-		httpUserError(writer, NewHTTPError(http.StatusServiceUnavailable, "too many pending OIDC logins, try again later", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusServiceUnavailable, "too many pending OIDC logins, try again later", nil))
 
 		return
 	}
@@ -269,7 +278,7 @@ func (a *AuthProviderOIDC) OIDCCallbackHandler(
 ) {
 	code, state, err := extractCodeAndStateParamFromRequest(req)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 		return
 	}
 
@@ -277,12 +286,12 @@ func (a *AuthProviderOIDC) OIDCCallbackHandler(
 
 	cookieState, err := req.Cookie(stateCookieName)
 	if err != nil {
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "state not found", err))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "state not found", err))
 		return
 	}
 
 	if state != cookieState.Value {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "state did not match", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "state did not match", nil))
 		return
 	}
 
@@ -290,29 +299,29 @@ func (a *AuthProviderOIDC) OIDCCallbackHandler(
 	// retrying then requires a fresh login flow rather than reusing the callback.
 	authInfo := a.getAuthInfoFromState(state)
 	if authInfo == nil {
-		httpUserError(writer, NewHTTPError(http.StatusGone, "login session expired, try again", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusGone, "login session expired, try again", nil))
 		return
 	}
 
 	if req.URL.Query().Get("error") != "" {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "OIDC authentication failed", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "OIDC authentication failed", nil))
 		return
 	}
 
 	oauth2Token, err := a.getOauth2Token(req.Context(), code, authInfo)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 		return
 	}
 
 	idToken, err := a.extractIDToken(req.Context(), oauth2Token)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 		return
 	}
 
 	if idToken.Nonce == "" {
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "nonce not found in IDToken", err))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "nonce not found in IDToken", err))
 		return
 	}
 
@@ -320,12 +329,12 @@ func (a *AuthProviderOIDC) OIDCCallbackHandler(
 
 	nonce, err := req.Cookie(nonceCookieName)
 	if err != nil {
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "nonce not found", err))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "nonce not found", err))
 		return
 	}
 
 	if idToken.Nonce != nonce.Value {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "nonce did not match", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "nonce did not match", nil))
 		return
 	}
 
@@ -338,7 +347,7 @@ func (a *AuthProviderOIDC) OIDCCallbackHandler(
 
 	var claims types.OIDCClaims
 	if err := idToken.Claims(&claims); err != nil { //nolint:noinlineerr
-		httpUserError(writer, fmt.Errorf("decoding ID token claims: %w", err))
+		httpUserError(writer, a.pages(), fmt.Errorf("decoding ID token claims: %w", err))
 		return
 	}
 
@@ -371,20 +380,20 @@ func (a *AuthProviderOIDC) OIDCCallbackHandler(
 	// against allowed emails, email domains, and groups.
 	err = doOIDCAuthorization(a.cfg, &claims)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 		return
 	}
 
 	if !claims.IdentifierKeepsSubject() {
 		log.Warn().Str("subject", claims.Sub).Msg("OIDC subject would be altered by provider identifier cleaning")
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "OIDC subject cannot be used as a provider identifier", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "OIDC subject cannot be used as a provider identifier", nil))
 
 		return
 	}
 
 	user, userChange, err := a.createOrUpdateUserFromClaim(&claims)
 	if err != nil {
-		httpUserError(writer, NewHTTPError(
+		httpUserError(writer, a.pages(), NewHTTPError(
 			http.StatusInternalServerError,
 			"could not create or update user",
 			err,
@@ -831,7 +840,7 @@ func (a *AuthProviderOIDC) beginConfirmation(
 	authReq, ok := a.h.state.GetAuthCacheEntry(authID)
 	if !ok {
 		log.Debug().Caller().Str("auth_id", authID.String()).Msg("auth session expired before authorization completed")
-		httpUserError(writer, NewHTTPError(http.StatusGone, "login session expired, try again", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusGone, "login session expired, try again", nil))
 
 		return
 	}
@@ -840,7 +849,7 @@ func (a *AuthProviderOIDC) beginConfirmation(
 		log.Warn().Caller().
 			Str("auth_id", authID.String()).
 			Msg("OIDC callback hit registration path with auth request that is not a node registration")
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "auth session is not for node registration", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "auth session is not for node registration", nil))
 
 		return
 	}
@@ -848,7 +857,7 @@ func (a *AuthProviderOIDC) beginConfirmation(
 	if !registration {
 		_, err := a.sshCheckSource(authID, authReq, user)
 		if err != nil {
-			httpUserError(writer, err)
+			httpUserError(writer, a.pages(), err)
 
 			return
 		}
@@ -884,21 +893,21 @@ func (a *AuthProviderOIDC) RegisterConfirmGetHandler(
 ) {
 	authID, err := authIDFromRequest(req)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 
 		return
 	}
 
 	authReq, ok := a.h.state.GetAuthCacheEntry(authID)
 	if !ok {
-		httpUserError(writer, errRegistrationLinkSpent)
+		httpUserError(writer, a.pages(), errRegistrationLinkSpent)
 
 		return
 	}
 
 	pending := authReq.PendingConfirmation()
 	if pending == nil {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "registration not OIDC-authorized", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "registration not OIDC-authorized", nil))
 
 		return
 	}
@@ -910,20 +919,20 @@ func (a *AuthProviderOIDC) RegisterConfirmGetHandler(
 	// the node being registered does.
 	cookie, err := req.Cookie(registerConfirmCSRFCookie)
 	if err != nil {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "missing csrf cookie", err))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "missing csrf cookie", err))
 
 		return
 	}
 
 	if cookie.Value != pending.CSRF {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "csrf token mismatch", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "csrf token mismatch", nil))
 
 		return
 	}
 
 	user, err := a.h.state.GetUserByID(types.UserID(pending.UserID))
 	if err != nil {
-		httpUserError(writer, fmt.Errorf("looking up user: %w", err))
+		httpUserError(writer, a.pages(), fmt.Errorf("looking up user: %w", err))
 
 		return
 	}
@@ -935,24 +944,31 @@ func (a *AuthProviderOIDC) RegisterConfirmGetHandler(
 		User:          user.Display(),
 	}
 
-	var content string
+	var (
+		content   []byte
+		renderErr error
+	)
 
 	if authReq.IsSSHCheck() {
 		src, err := a.sshCheckSource(authID, authReq, user)
 		if err != nil {
-			httpUserError(writer, err)
+			httpUserError(writer, a.pages(), err)
 
 			return
 		}
 
 		dst, ok := a.h.state.GetNodeByID(authReq.SSHCheckBinding().DstNodeID)
 		if !ok {
-			httpUserError(writer, NewHTTPError(http.StatusGone, "destination node no longer exists", nil))
+			httpUserError(writer, a.pages(), NewHTTPError(http.StatusGone, "destination node no longer exists", nil))
 
 			return
 		}
 
-		content = templates.SSHCheckConfirm(info, src.GivenName(), dst.GivenName()).Render()
+		content, renderErr = a.pages().SSHCheckConfirm(templates.SSHCheckData{
+			RegisterConfirmInfo: info,
+			Source:              src.GivenName(),
+			Destination:         dst.GivenName(),
+		})
 	} else {
 		regData := authReq.RegistrationData()
 		info.Hostname = regData.Hostname
@@ -967,18 +983,13 @@ func (a *AuthProviderOIDC) RegisterConfirmGetHandler(
 			info.Tags = regData.Hostinfo.RequestTags
 		}
 
-		content = templates.RegisterConfirm(info).Render()
+		content, renderErr = a.pages().RegisterConfirm(info)
 	}
 
 	// The page carries the token that finalises the registration, so no
 	// shared cache or history restore may serve it back.
 	writer.Header().Set("Cache-Control", "no-store")
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-
-	if _, err := writer.Write([]byte(content)); err != nil { //nolint:noinlineerr
-		util.LogErr(err, "Failed to write HTTP response")
-	}
+	writePage(writer, http.StatusOK)(content, renderErr)
 }
 
 // RegisterConfirmHandler is the POST endpoint behind the OIDC
@@ -990,7 +1001,7 @@ func (a *AuthProviderOIDC) RegisterConfirmHandler(
 ) {
 	authID, err := authIDFromRequest(req)
 	if err != nil {
-		httpUserError(writer, err)
+		httpUserError(writer, a.pages(), err)
 
 		return
 	}
@@ -1001,71 +1012,74 @@ func (a *AuthProviderOIDC) RegisterConfirmHandler(
 	req.Body = http.MaxBytesReader(writer, req.Body, 4*1024)
 
 	if err := req.ParseForm(); err != nil { //nolint:noinlineerr,gosec // body is bounded above
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "invalid form", err))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "invalid form", err))
 
 		return
 	}
 
 	formCSRF := req.PostFormValue(registerConfirmCSRFCookie) //nolint:gosec // body is bounded above
 	if formCSRF == "" {
-		httpUserError(writer, NewHTTPError(http.StatusBadRequest, "missing csrf token", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusBadRequest, "missing csrf token", nil))
 
 		return
 	}
 
 	cookie, err := req.Cookie(registerConfirmCSRFCookie)
 	if err != nil {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "missing csrf cookie", err))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "missing csrf cookie", err))
 
 		return
 	}
 
 	if cookie.Value != formCSRF {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "csrf token mismatch", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "csrf token mismatch", nil))
 
 		return
 	}
 
 	authReq, ok := a.h.state.GetAuthCacheEntry(authID)
 	if !ok {
-		httpUserError(writer, errRegistrationLinkSpent)
+		httpUserError(writer, a.pages(), errRegistrationLinkSpent)
 
 		return
 	}
 
 	pending := authReq.PendingConfirmation()
 	if pending == nil {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "registration not OIDC-authorized", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "registration not OIDC-authorized", nil))
 
 		return
 	}
 
 	if pending.CSRF != cookie.Value {
-		httpUserError(writer, NewHTTPError(http.StatusForbidden, "csrf token does not match cached registration", nil))
+		httpUserError(writer, a.pages(), NewHTTPError(http.StatusForbidden, "csrf token does not match cached registration", nil))
 
 		return
 	}
 
 	user, err := a.h.state.GetUserByID(types.UserID(pending.UserID))
 	if err != nil {
-		httpUserError(writer, fmt.Errorf("looking up user: %w", err))
+		httpUserError(writer, a.pages(), fmt.Errorf("looking up user: %w", err))
 
 		return
 	}
 
-	var content *bytes.Buffer
+	var (
+		content   []byte
+		renderErr error
+	)
 
 	if authReq.IsSSHCheck() {
 		_, err := a.sshCheckSource(authID, authReq, user)
 		if err != nil {
-			httpUserError(writer, err)
+			httpUserError(writer, a.pages(), err)
 
 			return
 		}
 
 		authReq.FinishAuth(types.AuthVerdict{})
 
-		content = renderAuthSuccessTemplate(user)
+		content, renderErr = a.renderAuthSuccess(user)
 	} else {
 		_, reauth := a.h.state.LoginNode(
 			authReq.RegistrationData().MachineKey,
@@ -1075,7 +1089,7 @@ func (a *AuthProviderOIDC) RegisterConfirmHandler(
 		node, err := a.handleRegistration(user, authID, pending.NodeExpiry)
 		if err != nil {
 			if errors.Is(err, db.ErrNodeNotFoundRegistrationCache) {
-				httpUserError(writer, newHTTPUserError(
+				httpUserError(writer, a.pages(), newHTTPUserError(
 					http.StatusGone,
 					registrationLinkSpentMsg,
 					registrationLinkSpentUserMsg,
@@ -1085,26 +1099,18 @@ func (a *AuthProviderOIDC) RegisterConfirmHandler(
 				return
 			}
 
-			httpUserError(writer, err)
+			httpUserError(writer, a.pages(), err)
 
 			return
 		}
 
-		content = renderRegistrationSuccessTemplate(user, node, reauth)
+		content, renderErr = a.renderRegistrationSuccess(user, node, reauth)
 	}
 
 	// Clear the CSRF cookie now that the request is final.
 	a.setRegisterConfirmCookie(writer, req, authID, "", -1)
 
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-
-	// [renderRegistrationSuccessTemplate]'s output only embeds
-	// HTML-escaped values from a server-side template, so the gosec
-	// XSS warning is a false positive here.
-	if _, err := writer.Write(content.Bytes()); err != nil { //nolint:noinlineerr,gosec
-		util.LogErr(err, "Failed to write HTTP response")
-	}
+	writePage(writer, http.StatusOK)(content, renderErr)
 }
 
 func (a *AuthProviderOIDC) handleRegistration(
@@ -1132,13 +1138,13 @@ func (a *AuthProviderOIDC) handleRegistration(
 	return node, nil
 }
 
-func renderRegistrationSuccessTemplate(
+func (a *AuthProviderOIDC) renderRegistrationSuccess(
 	user *types.User,
 	node types.NodeView,
 	reauth bool,
-) *bytes.Buffer {
+) ([]byte, error) {
 	result := templates.AuthSuccessResult{
-		Title:   "Headscale - Node Reauthenticated",
+		Title:   "Node Reauthenticated",
 		Heading: "Node reauthenticated",
 		Verb:    "Reauthenticated",
 		User:    user.Display(),
@@ -1149,26 +1155,24 @@ func renderRegistrationSuccessTemplate(
 	}
 
 	if !reauth {
-		result.Title = "Headscale - Node Registered"
+		result.Title = "Node Registered"
 		result.Heading = "Node registered"
 		result.Verb = "Registered"
 	}
 
-	return bytes.NewBufferString(templates.AuthSuccess(result).Render())
+	return a.pages().AuthSuccess(result)
 }
 
-func renderAuthSuccessTemplate(
-	user *types.User,
-) *bytes.Buffer {
+func (a *AuthProviderOIDC) renderAuthSuccess(user *types.User) ([]byte, error) {
 	result := templates.AuthSuccessResult{
-		Title:   "Headscale - SSH Session Authorized",
+		Title:   "SSH Session Authorized",
 		Heading: "SSH session authorized",
 		Verb:    "Authorized",
 		User:    user.Display(),
 		Message: "You may return to your terminal.",
 	}
 
-	return bytes.NewBufferString(templates.AuthSuccess(result).Render())
+	return a.pages().AuthSuccess(result)
 }
 
 // getCookieName generates a unique cookie name based on a cookie value. It

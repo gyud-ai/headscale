@@ -42,6 +42,7 @@ import (
 	"github.com/juanfont/headscale/hscontrol/dns"
 	"github.com/juanfont/headscale/hscontrol/mapper"
 	"github.com/juanfont/headscale/hscontrol/state"
+	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/juanfont/headscale/hscontrol/types/change"
 	"github.com/juanfont/headscale/hscontrol/util"
@@ -109,6 +110,9 @@ type Headscale struct {
 	authProvider   AuthProvider
 	mapBatcher     *mapper.Batcher
 
+	// pages renders the web pages and serves /static/.
+	pages *templates.Renderer
+
 	// One per long-poll session, held through its Disconnect cleanup, so
 	// shutdown can close state after waiting on it.
 	clientStreamsOpen sync.WaitGroup
@@ -152,6 +156,13 @@ func NewHeadscale(cfg *types.Config) (*Headscale, error) {
 		}
 	}
 
+	// Before any file is written: a template that does not render is a
+	// config error.
+	pages, err := templates.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	noisePrivateKey, err := readOrCreatePrivateKey(cfg.AbsPath(cfg.Noise.PrivateKeyPath))
 	if err != nil {
 		return nil, fmt.Errorf("reading or creating Noise protocol private key: %w", err)
@@ -189,6 +200,7 @@ func NewHeadscale(cfg *types.Config) (*Headscale, error) {
 		noisePrivateKey:   noisePrivateKey,
 		clientStreamsOpen: sync.WaitGroup{},
 		state:             s,
+		pages:             pages,
 	}
 
 	if cfg.DNSConfig.Certificates.Enabled {
@@ -254,7 +266,7 @@ func NewHeadscale(cfg *types.Config) (*Headscale, error) {
 
 	var authProvider AuthProvider
 
-	authProvider = NewAuthProviderWeb(cfg.ServerURL)
+	authProvider = NewAuthProviderWeb(cfg.ServerURL, pages)
 	if cfg.OIDC.Issuer != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -572,8 +584,9 @@ func (h *Headscale) createRouter(apiV1Mux, apiV2Mux http.Handler) *chi.Mux {
 	// to a [tailcfg.PingRequest]. The unguessable ping ID serves as authentication.
 	r.Head("/machine/ping-response", h.PingResponseHandler)
 
-	r.Get("/favicon.ico", FaviconHandler)
-	r.Get("/", BlankHandler)
+	r.Handle(templates.StaticPrefix+"*", h.pages.StaticHandler())
+	r.Get("/favicon.ico", h.pages.ServeFavicon)
+	r.Get("/", h.BlankHandler)
 
 	return r
 }
@@ -930,6 +943,11 @@ func (h *Headscale) Serve(ctx context.Context) error {
 					if err != nil {
 						log.Error().Err(err).Msg("reloading TLS certificate failed, still serving the previous one")
 					}
+				}
+
+				err := h.pages.Reload()
+				if err != nil {
+					log.Error().Err(err).Msg("reloading web templates failed, still serving the previous ones")
 				}
 
 				if h.cfg.Policy.IsEmpty() {
@@ -1420,6 +1438,14 @@ func (h *Headscale) SetServerURLForTest(tb testing.TB, url string) {
 	tb.Helper()
 
 	h.cfg.ServerURL = url
+
+	// The pages show the server URL.
+	pages, err := templates.New(h.cfg)
+	if err != nil {
+		tb.Fatalf("rendering web pages for %s: %v", url, err)
+	}
+
+	h.pages = pages
 }
 
 // StartBatcherForTest initialises and starts the map response batcher.

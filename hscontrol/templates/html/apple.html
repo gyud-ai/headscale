@@ -1,0 +1,66 @@
+{{- /* apple is /apple: setting up the iOS, macOS and tvOS clients. .Page is empty; the server URL is .Site.ServerURL. */ -}}
+{{template "layout" .}}
+{{- define "title"}}Apple - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<h1>iOS configuration</h1>
+<h2>GUI</h2>
+<ol>
+<li>Install the official Tailscale iOS client from the <a href="https://apps.apple.com/app/tailscale/id1470499037" rel="noreferrer noopener" target="_blank">App Store</a></li>
+<li>Open the <strong>Tailscale</strong> app</li>
+<li>Click the account icon in the top-right corner and select <strong>Log in…</strong></li>
+<li>Tap the top-right options menu button and select <strong>Use custom coordination server</strong></li>
+<li>Enter your instance URL: <code>{{.Site.ServerURL}}</code></li>
+<li>Enter your credentials and log in. {{.Site.Name}} should now be working on your iOS device</li>
+</ol>
+<h1>macOS configuration</h1>
+<h2>Command line</h2>
+<p>Use Tailscale's login command to add your profile:</p>
+<pre><code>tailscale login --login-server {{.Site.ServerURL}}</code></pre>
+<h2>GUI</h2>
+<ol>
+<li>Option + Click the <strong>Tailscale</strong> icon in the menu and hover over the <strong>Debug</strong> menu</li>
+<li>Under <strong>Custom Login Server</strong>, select <strong>Add Account...</strong></li>
+<li>Enter <code>{{.Site.ServerURL}}</code> of the {{.Site.Name}} instance and press <strong>Add Account</strong></li>
+<li>Follow the login procedure in the browser</li>
+</ol>
+<h2>Profiles</h2>
+<p>{{.Site.Name}} can be set to the default server by installing a configuration profile:</p>
+<div class="hs-actions">
+<a class="hs-button" href="/apple/macos-app-store" download="headscale_macos.mobileconfig">macOS AppStore profile</a>
+<a class="hs-button" href="/apple/macos-standalone" download="headscale_macos.mobileconfig">macOS Standalone profile</a>
+</div>
+<ol>
+<li>Download the profile, then open it. When it has been opened, there should be a notification that a profile can be installed</li>
+<li>Open <strong>System Preferences</strong> and go to <strong>Profiles</strong></li>
+<li>Find and install the <strong>{{.Site.Name}}</strong> profile</li>
+<li>Restart <strong>Tailscale.app</strong> and log in</li>
+</ol>
+<div class="hs-divider">or</div>
+<p>Use your terminal to configure the default setting for Tailscale by issuing one of the following commands:</p>
+<p>For app store client:</p>
+<pre><code>defaults write io.tailscale.ipn.macos ControlURL {{.Site.ServerURL}}</code></pre>
+<p>For standalone client:</p>
+<pre><code>defaults write io.tailscale.ipn.macsys ControlURL {{.Site.ServerURL}}</code></pre>
+<p>Restart <strong>Tailscale.app</strong> and log in.</p>
+<div class="hs-box hs-box--warning" role="note">
+{{template "icon_warning"}}
+<div><strong class="hs-box__heading">Caution</strong><div>You should always download and inspect the profile before installing it.</div></div>
+</div>
+<p>For app store client:</p>
+<pre><code>curl {{.Site.ServerURL}}/apple/macos-app-store</code></pre>
+<p>For standalone client:</p>
+<pre><code>curl {{.Site.ServerURL}}/apple/macos-standalone</code></pre>
+<h1>tvOS configuration</h1>
+<h2>GUI</h2>
+<ol>
+<li>Install the official Tailscale tvOS client from the <a href="https://apps.apple.com/app/tailscale/id1470499037" rel="noreferrer noopener" target="_blank">App Store</a></li>
+<li>Open <strong>Tailscale</strong></li>
+<li>Select <strong>Install VPN configuration</strong></li>
+<li>Select <strong>Allow</strong>, but don't sign in yet</li>
+<li>Open <strong>Settings</strong> (the Apple tvOS settings) &gt; <strong>Apps</strong> &gt; <strong>Tailscale</strong></li>
+<li>Enter <code>{{.Site.ServerURL}}</code> under <strong>ALTERNATE COORDINATION SERVER URL</strong></li>
+<li>Return to the tvOS <strong>Home</strong> screen and open <strong>Tailscale</strong></li>
+<li>Scan the QR code and follow the login procedure</li>
+<li>{{.Site.Name}} should now be working on your tvOS device</li>
+</ol>
+{{- end}}

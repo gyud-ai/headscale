@@ -5,60 +5,95 @@ import (
 	"testing"
 
 	"github.com/juanfont/headscale/hscontrol/templates"
+	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestTemplateHTMLConsistency(t *testing.T) {
-	// Test all templates produce consistent modern HTML
-	testCases := []struct {
-		name string
-		html string
-	}{
+type renderedPage struct {
+	name string
+	html string
+	// externalURLs are links that must open safely in a new tab.
+	externalURLs []string
+}
+
+// renderedPages are the built-in pages, rendered with the default theme as
+// the handlers render them.
+func renderedPages(t *testing.T) []renderedPage {
+	t.Helper()
+
+	r, err := templates.New(&types.Config{
+		ServerURL: "https://example.com",
+		Web:       types.WebConfig{Theme: types.DefaultWebTheme()},
+	})
+	require.NoError(t, err)
+
+	render := func(b []byte, err error) string {
+		t.Helper()
+		require.NoError(t, err)
+
+		return string(b)
+	}
+
+	return []renderedPage{
 		{
 			name: "Auth Success",
-			html: templates.AuthSuccess(templates.AuthSuccessResult{
-				Title:   "Headscale - Node Registered",
+			html: render(r.AuthSuccess(templates.AuthSuccessResult{
+				Title:   "Node Registered",
 				Heading: "Node registered",
 				Verb:    "Registered",
 				User:    "test@example.com",
 				Message: "You can now close this window.",
-			}).Render(),
+			})),
+			externalURLs: []string{
+				"https://headscale.net/stable/",
+				"https://tailscale.com/docs",
+			},
 		},
 		{
 			name: "Auth Error",
-			html: templates.AuthError(templates.AuthErrorResult{
-				Title:   "Headscale - Error",
+			html: render(r.AuthError(templates.AuthErrorResult{
+				Title:   "Error",
 				Heading: "Forbidden",
 				Message: "You are not authorized. Please contact your administrator.",
-			}).Render(),
+			})),
 		},
 		{
 			name: "Auth Web Register",
-			html: templates.AuthWeb(
-				"Machine registration",
-				"Run the command below in the headscale server to add this machine to your network:",
-				"headscale auth register --auth-id test-key-123 --user USERNAME",
-			).Render(),
+			html: render(r.AuthWeb(templates.AuthWebData{
+				Title:       "Machine registration",
+				Description: "Run the command below in the headscale server to add this machine to your network:",
+				Command:     "headscale auth register --auth-id test-key-123 --user USERNAME",
+			})),
 		},
 		{
 			name: "Auth Web Approve",
-			html: templates.AuthWeb(
-				"Authentication check",
-				"Run the command below in the headscale server to approve this authentication request:",
-				"headscale auth approve --auth-id test-key-123",
-			).Render(),
+			html: render(r.AuthWeb(templates.AuthWebData{
+				Title:       "Authentication check",
+				Description: "Run the command below in the headscale server to approve this authentication request:",
+				Command:     "headscale auth approve --auth-id test-key-123",
+			})),
 		},
 		{
 			name: "Windows Config",
-			html: templates.Windows("https://example.com").Render(),
+			html: render(r.Windows()),
+			externalURLs: []string{
+				"https://tailscale.com/download/windows",
+			},
 		},
 		{
 			name: "Apple Config",
-			html: templates.Apple("https://example.com").Render(),
+			html: render(r.Apple()),
+			externalURLs: []string{
+				"https://apps.apple.com/app/tailscale/id1470499037",
+			},
 		},
 	}
+}
 
-	for _, tc := range testCases {
+func TestTemplateHTMLConsistency(t *testing.T) {
+	// Test all templates produce consistent modern HTML
+	for _, tc := range renderedPages(t) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Check DOCTYPE
 			assert.True(t, strings.HasPrefix(tc.html, "<!DOCTYPE html>"),
@@ -92,55 +127,7 @@ func TestTemplateHTMLConsistency(t *testing.T) {
 }
 
 func TestTemplateModernHTMLFeatures(t *testing.T) {
-	testCases := []struct {
-		name string
-		html string
-	}{
-		{
-			name: "Auth Success",
-			html: templates.AuthSuccess(templates.AuthSuccessResult{
-				Title:   "Headscale - Node Registered",
-				Heading: "Node registered",
-				Verb:    "Registered",
-				User:    "test@example.com",
-				Message: "You can now close this window.",
-			}).Render(),
-		},
-		{
-			name: "Auth Error",
-			html: templates.AuthError(templates.AuthErrorResult{
-				Title:   "Headscale - Error",
-				Heading: "Forbidden",
-				Message: "You are not authorized. Please contact your administrator.",
-			}).Render(),
-		},
-		{
-			name: "Auth Web Register",
-			html: templates.AuthWeb(
-				"Machine registration",
-				"Run the command below in the headscale server to add this machine to your network:",
-				"headscale auth register --auth-id test-key-123 --user USERNAME",
-			).Render(),
-		},
-		{
-			name: "Auth Web Approve",
-			html: templates.AuthWeb(
-				"Authentication check",
-				"Run the command below in the headscale server to approve this authentication request:",
-				"headscale auth approve --auth-id test-key-123",
-			).Render(),
-		},
-		{
-			name: "Windows Config",
-			html: templates.Windows("https://example.com").Render(),
-		},
-		{
-			name: "Apple Config",
-			html: templates.Apple("https://example.com").Render(),
-		},
-	}
-
-	for _, tc := range testCases {
+	for _, tc := range renderedPages(t) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Check no deprecated tags
 			assert.NotContains(t, tc.html, "<font",
@@ -161,69 +148,7 @@ func TestTemplateModernHTMLFeatures(t *testing.T) {
 
 func TestTemplateExternalLinkSecurity(t *testing.T) {
 	// Test that all external links (http/https) have proper security attributes
-	testCases := []struct {
-		name         string
-		html         string
-		externalURLs []string // URLs that should have security attributes
-	}{
-		{
-			name: "Auth Success",
-			html: templates.AuthSuccess(templates.AuthSuccessResult{
-				Title:   "Headscale - Node Registered",
-				Heading: "Node registered",
-				Verb:    "Registered",
-				User:    "test@example.com",
-				Message: "You can now close this window.",
-			}).Render(),
-			externalURLs: []string{
-				"https://headscale.net/stable/",
-				"https://tailscale.com/docs",
-			},
-		},
-		{
-			name: "Auth Error",
-			html: templates.AuthError(templates.AuthErrorResult{
-				Title:   "Headscale - Error",
-				Heading: "Forbidden",
-				Message: "You are not authorized. Please contact your administrator.",
-			}).Render(),
-			externalURLs: []string{}, // No external links
-		},
-		{
-			name: "Auth Web Register",
-			html: templates.AuthWeb(
-				"Machine registration",
-				"Run the command below in the headscale server to add this machine to your network:",
-				"headscale auth register --auth-id test-key-123 --user USERNAME",
-			).Render(),
-			externalURLs: []string{}, // No external links
-		},
-		{
-			name: "Auth Web Approve",
-			html: templates.AuthWeb(
-				"Authentication check",
-				"Run the command below in the headscale server to approve this authentication request:",
-				"headscale auth approve --auth-id test-key-123",
-			).Render(),
-			externalURLs: []string{}, // No external links
-		},
-		{
-			name: "Windows Config",
-			html: templates.Windows("https://example.com").Render(),
-			externalURLs: []string{
-				"https://tailscale.com/download/windows",
-			},
-		},
-		{
-			name: "Apple Config",
-			html: templates.Apple("https://example.com").Render(),
-			externalURLs: []string{
-				"https://apps.apple.com/app/tailscale/id1470499037",
-			},
-		},
-	}
-
-	for _, tc := range testCases {
+	for _, tc := range renderedPages(t) {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, url := range tc.externalURLs {
 				// Find the link tag containing this URL
@@ -259,55 +184,7 @@ func TestTemplateExternalLinkSecurity(t *testing.T) {
 
 func TestTemplateAccessibilityAttributes(t *testing.T) {
 	// Test that all templates have proper accessibility attributes
-	testCases := []struct {
-		name string
-		html string
-	}{
-		{
-			name: "Auth Success",
-			html: templates.AuthSuccess(templates.AuthSuccessResult{
-				Title:   "Headscale - Node Registered",
-				Heading: "Node registered",
-				Verb:    "Registered",
-				User:    "test@example.com",
-				Message: "You can now close this window.",
-			}).Render(),
-		},
-		{
-			name: "Auth Error",
-			html: templates.AuthError(templates.AuthErrorResult{
-				Title:   "Headscale - Error",
-				Heading: "Forbidden",
-				Message: "You are not authorized. Please contact your administrator.",
-			}).Render(),
-		},
-		{
-			name: "Auth Web Register",
-			html: templates.AuthWeb(
-				"Machine registration",
-				"Run the command below in the headscale server to add this machine to your network:",
-				"headscale auth register --auth-id test-key-123 --user USERNAME",
-			).Render(),
-		},
-		{
-			name: "Auth Web Approve",
-			html: templates.AuthWeb(
-				"Authentication check",
-				"Run the command below in the headscale server to approve this authentication request:",
-				"headscale auth approve --auth-id test-key-123",
-			).Render(),
-		},
-		{
-			name: "Windows Config",
-			html: templates.Windows("https://example.com").Render(),
-		},
-		{
-			name: "Apple Config",
-			html: templates.Apple("https://example.com").Render(),
-		},
-	}
-
-	for _, tc := range testCases {
+	for _, tc := range renderedPages(t) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Check for translate="no" on body tag to prevent browser translation
 			// This is important for technical documentation with commands

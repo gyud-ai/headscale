@@ -94,6 +94,7 @@ func TestBuiltinPages(t *testing.T) {
 	assert.Contains(t, pages["success"], `id="checkbox"`)
 	assert.Contains(t, pages["success"], "<h2>Getting started</h2>")
 	assert.Contains(t, pages["success"], `href="https://headscale.net/stable/"`)
+	assert.Equal(t, 2, strings.Count(pages["apple"], `download="headscale_macos.mobileconfig"`))
 	assert.Contains(t, pages["error"], `id="error-icon"`)
 	assert.Contains(t, pages["error"], `role="alert"`)
 	assert.Contains(t, pages["register confirm"], "<tr><td>Existing node</td><td>laptop</td></tr>")
@@ -184,6 +185,9 @@ func TestTheme(t *testing.T) {
 	assert.Contains(t, html, "<p>Run by &lt;IT&gt;</p>")
 	assert.NotContains(t, html, "Powered by")
 	assert.Equal(t, "Example VPN", r.Name())
+
+	apple := mustRender(t)(r.Apple())
+	assert.Equal(t, 2, strings.Count(apple, `download="example_vpn_macos.mobileconfig"`))
 
 	success := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Heading: "Node registered", Verb: "Registered", User: "alice"}))
 	assert.Contains(t, success, "Registered as <strong>alice</strong>.")
@@ -330,6 +334,20 @@ func TestRemoveBlock(t *testing.T) {
 	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
 	assert.NotContains(t, html, "Getting started")
 	assert.NotContains(t, html, "none")
+}
+
+func TestProfileFileName(t *testing.T) {
+	for name, want := range map[string]string{
+		"Headscale":         "headscale_macos.mobileconfig",
+		"Example VPN":       "example_vpn_macos.mobileconfig",
+		"  ACME -- Corp! 2": "acme_corp_2_macos.mobileconfig",
+		"Café Réseau":       "caf_r_seau_macos.mobileconfig",
+		"":                  "headscale_macos.mobileconfig",
+		"!!!":               "headscale_macos.mobileconfig",
+		"Ωμέγα":             "headscale_macos.mobileconfig",
+	} {
+		assert.Equal(t, want, profileFileName(name), "%q", name)
+	}
 }
 
 func TestLayoutOverride(t *testing.T) {

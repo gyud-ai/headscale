@@ -78,6 +78,10 @@ type Site struct {
 	// HidePoweredBy is web.theme.hide_powered_by.
 	HidePoweredBy bool
 
+	// ProfileFileName is the file name the macOS configuration profiles
+	// download as, from Name: "headscale_macos.mobileconfig" by default.
+	ProfileFileName string
+
 	// ThemeCSS sets the CSS variables of the colours and fonts above, for
 	// a <style> element; empty when none is set.
 	ThemeCSS template.CSS
@@ -431,8 +435,37 @@ func newSite(cfg *types.Config) (*Site, error) {
 		Stylesheets:      urls(theme.Stylesheets),
 		FooterText:       theme.FooterText,
 		HidePoweredBy:    theme.HidePoweredBy,
+		ProfileFileName:  profileFileName(cmp.Or(theme.Name, types.DefaultWebTheme().Name)),
 		ThemeCSS:         themeCSS(theme),
 	}, nil
+}
+
+// profileFileName turns a site name into a file name for the macOS
+// profiles: lower case, every run of characters other than a-z and 0-9
+// one underscore. A name with none of those falls back to "headscale".
+func profileFileName(name string) string {
+	var (
+		b   strings.Builder
+		sep bool
+	)
+
+	for _, r := range strings.ToLower(name) {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			sep = true
+
+			continue
+		}
+
+		if sep && b.Len() > 0 {
+			b.WriteByte('_')
+		}
+
+		sep = false
+
+		b.WriteRune(r)
+	}
+
+	return cmp.Or(b.String(), "headscale") + "_macos.mobileconfig"
 }
 
 // themeCSS overrides the variables of style.css that theme sets. A rule

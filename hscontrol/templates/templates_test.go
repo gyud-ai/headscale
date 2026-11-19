@@ -261,6 +261,30 @@ func TestTemplateOverrides(t *testing.T) {
 	assert.Contains(t, apple, "iOS configuration", "the built-in content stays")
 }
 
+// TestPageKinds: an override can word each case on its own, from Kind,
+// Code and AuthID rather than the built-in English text.
+func TestPageKinds(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"auth_success.html": `{{if eq .Page.Kind "reauth"}}welcome back{{else if eq .Page.Kind "ssh"}}ssh ok{{else}}registered{{end}}`,
+		"auth_error.html":   `{{if eq .Page.Code 410}}link used{{else}}error {{.Page.Code}}{{end}}`,
+		"auth_web.html":     `{{.Page.Kind}}:{{.Page.AuthID}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	for kind, want := range map[string]string{
+		AuthSuccessRegister: "registered",
+		AuthSuccessReauth:   "welcome back",
+		AuthSuccessSSH:      "ssh ok",
+	} {
+		assert.Equal(t, want, mustRender(t)(r.AuthSuccess(AuthSuccessResult{Kind: kind})), kind)
+	}
+
+	assert.Equal(t, "link used", mustRender(t)(r.AuthError(AuthErrorResult{Code: 410})))
+	assert.Equal(t, "error 403", mustRender(t)(r.AuthError(AuthErrorResult{Code: 403})))
+	assert.Equal(t, "auth:abc", mustRender(t)(r.AuthWeb(AuthWebData{Kind: AuthWebAuth, AuthID: "abc"})))
+}
+
 func TestLayoutOverride(t *testing.T) {
 	dir := writeFiles(t, map[string]string{
 		"layout.html": `{{define "layout"}}<!DOCTYPE html><title>{{template "title" .}}</title><div class="brand">{{template "content" .}}</div>{{end}}`,

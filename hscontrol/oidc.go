@@ -1149,6 +1149,7 @@ func (a *AuthProviderOIDC) renderRegistrationSuccess(
 		Verb:    "Reauthenticated",
 		User:    user.Display(),
 		Message: "You can now close this window.",
+		Kind:    templates.AuthSuccessReauth,
 	}
 	if node.IsTagged() {
 		result.User = strings.Join(node.Tags().AsSlice(), ", ")
@@ -1158,6 +1159,7 @@ func (a *AuthProviderOIDC) renderRegistrationSuccess(
 		result.Title = "Node Registered"
 		result.Heading = "Node registered"
 		result.Verb = "Registered"
+		result.Kind = templates.AuthSuccessRegister
 	}
 
 	return a.pages().AuthSuccess(result)
@@ -1170,6 +1172,7 @@ func (a *AuthProviderOIDC) renderAuthSuccess(user *types.User) ([]byte, error) {
 		Verb:    "Authorized",
 		User:    user.Display(),
 		Message: "You may return to your terminal.",
+		Kind:    templates.AuthSuccessSSH,
 	}
 
 	return a.pages().AuthSuccess(result)

@@ -90,6 +90,7 @@ func httpUserError(w http.ResponseWriter, pages *templates.Renderer, err error) 
 		Title:   "Error",
 		Heading: http.StatusText(code),
 		Message: userMsg,
+		Code:    code,
 	}))
 }
 
@@ -378,6 +379,8 @@ func (a *AuthProviderWeb) AuthHandler(
 		Title:       "Authentication check",
 		Description: "Run the command below in the headscale server to approve this authentication request:",
 		Command:     "headscale auth approve --auth-id " + authID.String(),
+		Kind:        templates.AuthWebAuth,
+		AuthID:      authID.String(),
 	}))
 }
 
@@ -414,6 +417,8 @@ func (a *AuthProviderWeb) RegisterHandler(
 		Title:       "Node registration",
 		Description: "Run the command below in the headscale server to add this node to your network:",
 		Command:     fmt.Sprintf("headscale auth register --auth-id %s --user USERNAME", authId.String()),
+		Kind:        templates.AuthWebRegister,
+		AuthID:      authId.String(),
 	}))
 }
 

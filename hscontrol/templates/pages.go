@@ -21,7 +21,22 @@ type AuthWebData struct {
 
 	// Command is the headscale CLI command to run.
 	Command string
+
+	// Kind is what the command approves: AuthWebRegister or AuthWebAuth.
+	Kind string
+
+	// AuthID is the request's auth ID, the one Command names.
+	AuthID string
 }
+
+// The values of AuthWebData.Kind.
+const (
+	// AuthWebRegister is /register/{id}: a new node waiting to be added.
+	AuthWebRegister = "register"
+
+	// AuthWebAuth is /auth/{id}: an auth request waiting for approval.
+	AuthWebAuth = "auth"
+)
 
 // AuthErrorResult contains the text content for an error page shown
 // to users in their browser when a browser-facing operation fails
@@ -39,6 +54,10 @@ type AuthErrorResult struct {
 	// the heading, e.g. "You are not authorized. Please contact
 	// your administrator."
 	Message string
+
+	// Code is the HTTP status code of the response, e.g. 410. Heading is
+	// its status text.
+	Code int
 }
 
 // AuthSuccessResult contains the text content for an authentication success page.
@@ -65,7 +84,23 @@ type AuthSuccessResult struct {
 	// Message is the follow-up instruction shown after the user name,
 	// e.g. "You can now close this window."
 	Message string
+
+	// Kind is what succeeded: AuthSuccessRegister, AuthSuccessReauth or
+	// AuthSuccessSSH.
+	Kind string
 }
+
+// The values of AuthSuccessResult.Kind.
+const (
+	// AuthSuccessRegister is a new node registered.
+	AuthSuccessRegister = "register"
+
+	// AuthSuccessReauth is an existing node logged in again.
+	AuthSuccessReauth = "reauth"
+
+	// AuthSuccessSSH is an SSH session a check rule held, now approved.
+	AuthSuccessSSH = "ssh"
+)
 
 // RegisterConfirmInfo carries the human-readable information shown on
 // the registration confirmation interstitial that an OIDC-authenticated
@@ -186,13 +221,17 @@ var samples = map[string][]any{
 		Title:       "Node registration",
 		Description: "Run the command below in the headscale server to add this node to your network:",
 		Command:     "headscale auth register --auth-id sample --user USERNAME",
+		Kind:        AuthWebRegister,
+		AuthID:      "sample",
 	}},
 	pageAuthSuccess: {AuthSuccessResult{
 		Title: "Node Registered", Heading: "Node registered", Verb: "Registered",
 		User: "user@example.com", Message: "You can now close this window.",
+		Kind: AuthSuccessRegister,
 	}},
 	pageAuthError: {AuthErrorResult{
 		Title: "Error", Heading: "Forbidden", Message: "You are not authorized.",
+		Code: 403,
 	}},
 	pageRegisterConfirm: {
 		sampleConfirm(),

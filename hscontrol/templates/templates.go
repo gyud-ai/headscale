@@ -423,10 +423,12 @@ func newSite(cfg *types.Config) (*Site, error) {
 // later in the page wins over the built-in light and dark ones alike, so
 // a primary colour without a dark one applies to both schemes.
 func themeCSS(theme types.WebThemeConfig) template.CSS {
+	// The hover colour is the primary colour mixed with white, so links
+	// and buttons still change colour on hover.
 	colors := func(c types.CSSColor) []string {
 		return []string{
 			"--md-primary-fg-color:" + string(c),
-			"--md-accent-fg-color:" + string(c),
+			"--md-accent-fg-color:color-mix(in srgb," + string(c) + " 80%,white)",
 			"--hs-focus-ring:" + string(c),
 		}
 	}

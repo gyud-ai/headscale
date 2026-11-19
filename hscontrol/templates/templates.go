@@ -17,9 +17,11 @@ import (
 	"io"
 	"io/fs"
 	"maps"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -523,13 +525,21 @@ func profileFileName(name string) string {
 // later in the page wins over the built-in light and dark ones alike, so
 // a primary colour without a dark one applies to both schemes.
 func themeCSS(theme types.WebThemeConfig) template.CSS {
-	// The hover colour is the primary colour mixed with white, so links
-	// and buttons still change colour on hover.
+	// The text on the primary colour is black or white, whichever
+	// contrasts more. The hover colour is the primary colour mixed with
+	// the other one, so links and buttons still change colour on hover and
+	// the button text contrasts more on hover, not less.
 	colors := func(c types.CSSColor) []string {
+		on, away := "#ffffff", "black"
+		if !whiteOn(string(c)) {
+			on, away = "#000000", "white"
+		}
+
 		return []string{
 			"--md-primary-fg-color:" + string(c),
-			"--md-accent-fg-color:color-mix(in srgb," + string(c) + " 80%,white)",
+			"--md-accent-fg-color:color-mix(in srgb," + string(c) + " 80%," + away + ")",
 			"--hs-focus-ring:" + string(c),
+			"--hs-on-primary:" + on,
 		}
 	}
 
@@ -556,6 +566,44 @@ func themeCSS(theme types.WebThemeConfig) template.CSS {
 	}
 
 	return template.CSS(b.String()) //nolint:gosec // G203: built from validated colours and font lists only
+}
+
+// whiteOn reports whether white text contrasts more than black on the
+// hex colour c, by the WCAG contrast ratio. The alpha of #rgba and
+// #rrggbbaa is ignored: what shows through is not known here. One of
+// the two is always at least 4.5:1, the WCAG minimum for text.
+func whiteOn(c string) bool {
+	l := luminance(c)
+
+	return 1.05/(l+0.05) >= (l+0.05)/0.05 //nolint:mnd // WCAG contrast ratio with white (1) and black (0)
+}
+
+// luminance is the WCAG relative luminance of the hex colour c, 0 for
+// black to 1 for white. c has been validated as a CSSColor.
+func luminance(c string) float64 {
+	hex := strings.TrimPrefix(c, "#")
+	if len(hex) <= 4 { //nolint:mnd // #rgb and #rgba
+		var b strings.Builder
+		for _, r := range hex {
+			b.WriteRune(r)
+			b.WriteRune(r)
+		}
+
+		hex = b.String()
+	}
+
+	channel := func(i int) float64 {
+		v, _ := strconv.ParseUint(hex[i:i+2], 16, 8)
+
+		s := float64(v) / 255 //nolint:mnd // 8-bit channel
+		if s <= 0.04045 {     //nolint:mnd // sRGB transfer function
+			return s / 12.92 //nolint:mnd // sRGB transfer function
+		}
+
+		return math.Pow((s+0.055)/1.055, 2.4) //nolint:mnd // sRGB transfer function
+	}
+
+	return 0.2126*channel(0) + 0.7152*channel(2) + 0.0722*channel(4) //nolint:mnd // WCAG luminance weights
 }
 
 func (r *Renderer) render(name string, page any) ([]byte, error) {

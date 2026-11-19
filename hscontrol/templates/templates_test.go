@@ -92,6 +92,8 @@ func TestBuiltinPages(t *testing.T) {
 	assert.Contains(t, pages["windows"], "tailscale login --login-server https://hs.example.com")
 	assert.Contains(t, pages["success"], "Registered as <strong>alice</strong>. Done.")
 	assert.Contains(t, pages["success"], `id="checkbox"`)
+	assert.Contains(t, pages["success"], "<h2>Getting started</h2>")
+	assert.Contains(t, pages["success"], `href="https://headscale.net/stable/"`)
 	assert.Contains(t, pages["error"], `id="error-icon"`)
 	assert.Contains(t, pages["error"], `role="alert"`)
 	assert.Contains(t, pages["register confirm"], "<tr><td>Existing node</td><td>laptop</td></tr>")
@@ -182,6 +184,10 @@ func TestTheme(t *testing.T) {
 	assert.Contains(t, html, "<p>Run by &lt;IT&gt;</p>")
 	assert.NotContains(t, html, "Powered by")
 	assert.Equal(t, "Example VPN", r.Name())
+
+	success := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Heading: "Node registered", Verb: "Registered", User: "alice"}))
+	assert.Contains(t, success, "Registered as <strong>alice</strong>.")
+	assert.NotContains(t, success, "Getting started", "hide_powered_by hides the headscale links")
 
 	// Order: fonts, then the built-in stylesheet, the theme, then extras.
 	fonts := strings.Index(html, "/static/fonts.css")
@@ -283,6 +289,47 @@ func TestPageKinds(t *testing.T) {
 	assert.Equal(t, "link used", mustRender(t)(r.AuthError(AuthErrorResult{Code: 410})))
 	assert.Equal(t, "error 403", mustRender(t)(r.AuthError(AuthErrorResult{Code: 403})))
 	assert.Equal(t, "auth:abc", mustRender(t)(r.AuthWeb(AuthWebData{Kind: AuthWebAuth, AuthID: "abc"})))
+}
+
+func TestGettingStartedOverride(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"brand.html": `{{define "getting_started"}}<p>Ask IT for help.</p>{{end}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
+	assert.Contains(t, html, "<p>Ask IT for help.</p>")
+	assert.NotContains(t, html, "Getting started")
+}
+
+// TestOldComponentsOverride: a components.html copied from an older
+// version, without getting_started, still loads; its own icons win.
+func TestOldComponentsOverride(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"components.html": `{{define "icon_success"}}<i>ok</i>{{end}}{{define "icon_error"}}<i>x</i>{{end}}{{define "icon_warning"}}<i>!</i>{{end}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
+	assert.Contains(t, html, "<i>ok</i>")
+	assert.NotContains(t, html, `id="checkbox"`)
+	assert.Contains(t, html, "<h2>Getting started</h2>", "the built-in getting_started fills in")
+}
+
+// TestRemoveBlock: an empty definition does not replace a block, as in
+// text/template; one holding an HTML comment does, and renders nothing.
+func TestRemoveBlock(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"brand.html": `{{define "getting_started"}}<!-- none -->{{end}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
+	assert.NotContains(t, html, "Getting started")
+	assert.NotContains(t, html, "none")
 }
 
 func TestLayoutOverride(t *testing.T) {

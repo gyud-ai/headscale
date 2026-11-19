@@ -486,6 +486,7 @@ func TestStatic(t *testing.T) {
 		{"/static/brand/logo.svg", http.StatusOK, "<svg/>", "image/svg+xml"},
 		{"/static/fonts/a.woff2", http.StatusOK, "font", "font/woff2"},
 		{"/static/headscale.svg", http.StatusOK, "<svg", "image/svg+xml"},
+		{"/static/headscale-dark.svg", http.StatusOK, "<svg", "image/svg+xml"},
 		{"/static/favicon.png", http.StatusOK, "", "image/png"},
 		{"/static/", http.StatusNotFound, "", ""},
 		{"/static/brand", http.StatusNotFound, "", ""},

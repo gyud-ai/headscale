@@ -30,12 +30,14 @@ web:
     hide_powered_by: true
 ```
 
-- `name` replaces "Headscale" in page titles, page text and the display name of the Apple configuration profile.
+- `name` replaces "Headscale" in page titles, page text, and the display name and download file name of the Apple
+  configuration profile (`example_vpn_macos.mobileconfig` for "Example VPN").
 - `logo` is the image at the top of every page. Set it to `""` to show no logo.
-- `primary_color` colours links, buttons and focus rings. `primary_color_dark` replaces it when the browser asks for a
-  dark colour scheme; without it, `primary_color` is used for both.
+- `primary_color` colours links, buttons and focus rings; on hover they take a lighter mix of it. `primary_color_dark`
+  replaces it when the browser asks for a dark colour scheme; without it, `primary_color` is used for both.
 - `footer_text` is a line of plain text at the bottom of every page. `hide_powered_by` removes the "Powered by
-  Headscale" link below it.
+  Headscale" link below it, and the "Getting started" links to the headscale and Tailscale documentation on the login
+  success page.
 
 ### Fonts
 
@@ -108,9 +110,11 @@ web:
       - "/static/brand.css"
 ```
 
-The built-in stylesheet keeps its colours in CSS variables, such as `--md-primary-fg-color`, `--hs-bg` and
-`--hs-border`, and styles the page parts through classes, such as `.hs-box`, `.hs-device-table` and `.hs-footer`. Read
-`style.css` for the full list.
+The built-in stylesheet keeps its colours in CSS variables, such as `--md-primary-fg-color`, `--hs-bg`, `--hs-border`
+and `--hs-on-primary` (the text on buttons), and styles the page parts through classes, such as `.hs-box`,
+`.hs-device-table` and `.hs-footer`. Read `style.css` for the full list. Sizes and spacing, such as the logo width,
+the page width and paddings, are plain values in those rules rather than variables: override the rule in your
+stylesheet.
 
 !!! warning "Reverse proxy"
 
@@ -150,16 +154,17 @@ headscale generate web /etc/headscale/web
 
 ### Replacing one block
 
-Every other `.html` file in `templates_dir` is loaded into every page, after the layout. Define one of the layout's
-blocks there to replace it on every page, and keep the rest of the built-in layout:
+Every other `.html` file in `templates_dir` is loaded into every page, after the layout. Define one of these blocks
+there to replace it on every page, and keep the rest of the built-in layout:
 
-| Block     | Default                                           |
-| --------- | ------------------------------------------------- |
-| `title`   | The page title; each page sets it                 |
-| `head`    | Empty; extra tags at the end of `<head>`          |
-| `header`  | The logo                                          |
-| `content` | The page itself; each page sets it                |
-| `footer`  | `footer_text` and the "Powered by Headscale" link |
+| Block             | Default                                                                      |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `title`           | The page title; each page sets it                                            |
+| `head`            | Empty; extra tags at the end of `<head>`                                     |
+| `header`          | The logo                                                                     |
+| `content`         | The page itself; each page sets it                                           |
+| `footer`          | `footer_text` and the "Powered by Headscale" link                            |
+| `getting_started` | The documentation links on `auth_success.html`; empty with `hide_powered_by` |
 
 ```html title="brand.html"
 {{define "header"}}
@@ -172,6 +177,16 @@ blocks there to replace it on every page, and keep the rest of the built-in layo
 </footer>
 {{end}}
 ```
+
+To remove a block, define it with an HTML comment. An empty definition, `{{define "footer"}}{{end}}`, leaves the
+built-in block in place, as Go templates do; a comment replaces it and is not sent to the browser:
+
+```html title="brand.html"
+{{define "getting_started"}}<!-- none -->{{end}}
+```
+
+A `components.html` of your own replaces only the components it defines. A copy made by an older
+`headscale generate web` keeps working: components added since come from the built-in file.
 
 ### Replacing a page
 
@@ -201,16 +216,35 @@ as `html/template` does: a hostname a device reports cannot add markup to the pa
 | `FontFamily`, `CodeFontFamily`     | `theme.font_family`, `theme.code_font_family`                    |
 | `FontStylesheets`, `Stylesheets`   | `theme.font_stylesheets`, `theme.stylesheets`, lists of URLs     |
 | `ThemeCSS`                         | The CSS variables the colours and fonts above set, for `<style>` |
+| `ProfileFileName`                  | The download name of the Apple profiles, from `theme.name`       |
 
 | Page                                       | `.Page` fields                                                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
 | `apple.html`, `windows.html`, `blank.html` | None                                                                                                       |
-| `auth_web.html`                            | `Title`, `Description`, `Command`                                                                          |
+| `auth_web.html`                            | `Title`, `Description`, `Command`, `Kind`, `AuthID`                                                        |
 | `register_confirm.html`                    | `FormAction`, `CSRFTokenName`, `CSRFToken`, `User`, `Hostname`, `OS`, `MachineKey`, `ExistingNode`, `Tags` |
 | `ssh_check_confirm.html`                   | `Source`, `Destination`, and the fields of `register_confirm.html`                                         |
-| `auth_success.html`                        | `Title`, `Heading`, `Verb`, `User`, `Message`                                                              |
-| `auth_error.html`                          | `Title`, `Heading`, `Message`                                                                              |
+| `auth_success.html`                        | `Title`, `Heading`, `Verb`, `User`, `Message`, `Kind`                                                      |
+| `auth_error.html`                          | `Title`, `Heading`, `Message`, `Code`                                                                      |
 | `ping.html`                                | `Query`, `Result` (`Status`, `Latency`, `NodeID`, `Message`), `Nodes` (`ID`, `Hostname`, `IPs`)            |
+
+The text fields hold headscale's English wording. To word or translate a page yourself, branch on the fields that say
+which case it is:
+
+- `auth_web.html`: `Kind` is `register` (`/register/{id}`, a new node) or `auth` (`/auth/{id}`, an auth request), and
+  `AuthID` is the ID the command names.
+- `auth_success.html`: `Kind` is `register`, `reauth` (a node logged in again) or `ssh` (an SSH session approved).
+- `auth_error.html`: `Code` is the HTTP status code, such as `403` or `410`; `Heading` is its status text.
+
+```html title="auth_success.html"
+{{template "layout" .}}
+{{define "title"}}Signed in - {{.Site.Name}}{{end}}
+{{define "content"}}
+{{if eq .Page.Kind "ssh"}}<p>SSH access approved. Return to your terminal.</p>
+{{else if eq .Page.Kind "reauth"}}<p>Welcome back, {{.Page.User}}.</p>
+{{else}}<p>Your device is connected as {{.Page.User}}.</p>{{end}}
+{{end}}
+```
 
 Besides the [built-in functions](https://pkg.go.dev/text/template#hdr-Functions), such as `or` for a default value,
 templates can call `join`: `{{join .Page.Tags ", "}}`.
@@ -241,3 +275,15 @@ Send headscale a `SIGHUP`, or run `systemctl reload headscale`, to read the temp
 load is logged and the previous templates keep serving. The `theme` is read only at startup.
 
 Templates are code run by headscale: keep `templates_dir` writable only by the administrators of the server.
+
+## What stays fixed
+
+Some parts of the pages are not settings, on purpose:
+
+- **The `/debug/ping` page** is on `metrics_listen_addr`, for administrators. Its text is not themed beyond the layout.
+- **`lang="en"`** on every page. The built-in text is English; declaring another language without translating it would
+  mislead browsers and screen readers. A page or layout you write yourself can set its own.
+- **Sizes and spacing** are plain values in `style.css`. A stylesheet in `theme.stylesheets` loads after it and can
+  override any rule.
+- **The commands on `auth_web.html`** are built by headscale so they match its CLI. A custom page can build its own from
+  `Kind` and `AuthID`.

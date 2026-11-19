@@ -267,10 +267,12 @@
                 "scss"
                 "html"
               ];
-              # Mirror .prettierignore (docs/ are mkdocs-flavoured; gen/ generated).
+              # Mirror .prettierignore (docs/ are mkdocs-flavoured; gen/ generated;
+              # hscontrol/templates/html/ are Go templates).
               fmtExclude = [
                 ./gen
                 ./docs
+                ./hscontrol/templates/html
               ];
             }
           );

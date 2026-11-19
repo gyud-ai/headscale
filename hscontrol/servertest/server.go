@@ -189,6 +189,7 @@ func NewServer(tb testing.TB, opts ...ServerOption) *TestServer {
 	if sc.web != nil {
 		cfg.Web = *sc.web
 	}
+
 	cfg.Tuning.BatchChangeDelay = sc.batchDelay
 	cfg.Tuning.BatcherWorkers = sc.batcherWorkers
 	cfg.Tuning.NodeMapSessionBufferedChanSize = sc.bufferedChanSize

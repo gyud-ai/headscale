@@ -894,6 +894,12 @@ type WebThemeConfig struct {
 	// `web.static_dir`. Empty shows no logo.
 	Logo WebURL `example:"\"/static/logo.svg\"" koanf:"logo"`
 
+	// LogoDark replaces `web.theme.logo` when the browser asks for a dark
+	// colour scheme, as `web.theme.primary_color_dark` does for the
+	// colour. Needs `web.theme.logo`. Empty uses `web.theme.logo` for
+	// both, except that the built-in logo has a built-in dark version.
+	LogoDark WebURL `example:"\"/static/logo-dark.svg\"" koanf:"logo_dark"`
+
 	// PrimaryColor is the colour of links, buttons and focus rings, as
 	// `#rrggbb`. Empty keeps the built-in blue.
 	PrimaryColor CSSColor `example:"\"#0a7d5a\"" koanf:"primary_color"`

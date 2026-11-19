@@ -177,8 +177,8 @@ func TestTheme(t *testing.T) {
 	assert.Contains(t, html, `<link rel="stylesheet" href="/static/fonts.css">`)
 	assert.Contains(t, html, `<link rel="stylesheet" href="https://cdn.example.com/brand.css">`)
 	assert.NotContains(t, html, "fonts.googleapis.com")
-	assert.Contains(t, html, `<style>:root{--md-primary-fg-color:#0a7d5a;--md-accent-fg-color:#0a7d5a;--hs-focus-ring:#0a7d5a;--md-text-font:"Inter", sans-serif;--md-code-font:monospace}`+
-		`@media (prefers-color-scheme: dark){:root{--md-primary-fg-color:#4fd1a5;--md-accent-fg-color:#4fd1a5;--hs-focus-ring:#4fd1a5}}</style>`)
+	assert.Contains(t, html, `<style>:root{--md-primary-fg-color:#0a7d5a;--md-accent-fg-color:color-mix(in srgb,#0a7d5a 80%,white);--hs-focus-ring:#0a7d5a;--md-text-font:"Inter", sans-serif;--md-code-font:monospace}`+
+		`@media (prefers-color-scheme: dark){:root{--md-primary-fg-color:#4fd1a5;--md-accent-fg-color:color-mix(in srgb,#4fd1a5 80%,white);--hs-focus-ring:#4fd1a5}}</style>`)
 	assert.Contains(t, html, "<p>Run by &lt;IT&gt;</p>")
 	assert.NotContains(t, html, "Powered by")
 	assert.Equal(t, "Example VPN", r.Name())

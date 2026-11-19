@@ -110,11 +110,90 @@ web:
       - "/static/brand.css"
 ```
 
-The built-in stylesheet keeps its colours in CSS variables, such as `--md-primary-fg-color`, `--hs-bg`, `--hs-border`
-and `--hs-on-primary` (the text on buttons), and styles the page parts through classes, such as `.hs-box`,
-`.hs-device-table` and `.hs-footer`. Read `style.css` for the full list. Sizes and spacing, such as the logo width,
-the page width and paddings, are plain values in those rules rather than variables: override the rule in your
-stylesheet.
+The built-in stylesheet styles the page parts through classes, such as `.hs-box`, `.hs-device-table` and `.hs-footer`,
+and reads its colours and sizes from the CSS variables below. A stylesheet in `theme.stylesheets` can set a variable to
+change every rule that uses it, or override a rule to change one place:
+
+```css title="brand.css"
+:root {
+  --hs-radius-md: 0; /* square buttons and inputs */
+  --hs-page-width: 960px;
+  --hs-logo-width: 240px;
+}
+```
+
+### Stylesheet variables
+
+Variables named `--md-*` come from [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/), whose look the
+pages share, and keep its names; the others are named `--hs-*`. The `theme` settings set the variables marked with
+the setting. A size in `em` is relative to the font size of the element that uses it, so `--hs-flow-space-sm` is
+narrower between the footer lines, whose text is smaller, than between list items.
+
+Colours, with the light and the dark default (`prefers-color-scheme: dark`):
+
+| Variable                          | Light                 | Dark                        | Used for                                        |
+| --------------------------------- | --------------------- | --------------------------- | ----------------------------------------------- |
+| `--md-primary-fg-color`           | `#4051b5`             | `#7b8fdb`                   | Links and buttons (`theme.primary_color`)       |
+| `--md-accent-fg-color`            | `#526cfe`             | `#8fa4ff`                   | Hover colour (mixed from `theme.primary_color`) |
+| `--md-typeset-a-color`            | primary colour        | primary colour              | Links                                           |
+| `--hs-focus-ring`                 | `#4051b5`             | `#7b8fdb`                   | Keyboard focus ring (`theme.primary_color`)     |
+| `--hs-on-primary`                 | `#ffffff`             | `#ffffff`                   | Text on buttons and button links                |
+| `--md-default-fg-color`           | `rgba(0, 0, 0, 0.87)` | `rgba(255, 255, 255, 0.87)` | Text                                            |
+| `--md-default-fg-color--light`    | `rgba(0, 0, 0, 0.54)` | `rgba(255, 255, 255, 0.6)`  | Headings, footer, table labels                  |
+| `--md-default-fg-color--lighter`  | `rgba(0, 0, 0, 0.32)` | `rgba(255, 255, 255, 0.38)` | Not used by the built-in pages                  |
+| `--md-default-fg-color--lightest` | `rgba(0, 0, 0, 0.07)` | `rgba(255, 255, 255, 0.07)` | Not used by the built-in pages                  |
+| `--md-code-fg-color`              | `#36464e`             | `#c9d1d9`                   | Code text                                       |
+| `--md-code-bg-color`              | `#f5f5f5`             | `#1e1e1e`                   | Code background                                 |
+| `--hs-bg`                         | `#ffffff`             | `#111827`                   | Page, input and collapsible-section background  |
+| `--hs-border`                     | `#e5e7eb`             | `#374151`                   | Borders, table rules, the "or" divider          |
+| `--hs-success`, `--hs-success-bg` | `#059669`, `#d1fae5`  | `#34d399`, `#064e3b`        | Success box                                     |
+| `--hs-error`, `--hs-error-bg`     | `#dc2626`, `#fee2e2`  | `#f87171`, `#450a0a`        | Error box                                       |
+| `--hs-warning-text`               | `#92400e`             | `#fbbf24`                   | Warning box text                                |
+| `--hs-warning-bg`                 | `#fef3c7`             | `#451a03`                   | Warning box background                          |
+| `--hs-warning-border`             | `#f59e0b`             | `#d97706`                   | Warning box border and icon                     |
+
+Fonts:
+
+| Variable         | Default                               | Used for                        |
+| ---------------- | ------------------------------------- | ------------------------------- |
+| `--md-text-font` | `"Roboto"`, then system fonts         | Text (`theme.font_family`)      |
+| `--md-code-font` | `"Roboto Mono"`, then monospace fonts | Code (`theme.code_font_family`) |
+
+Sizes, the same in light and dark:
+
+| Variable                                                                         | Default                                         | Used for                                                         |
+| -------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| `--hs-space-1`, `-2`, `-3`, `-4`, `-6`, `-8`, `-12`, `-16`                       | `0.25rem` to `4rem`: the number times `0.25rem` | Paddings, gaps and margins of boxes, buttons, forms and the page |
+| `--hs-flow-space`                                                                | `1em`                                           | Space above and below paragraphs, lists and code blocks          |
+| `--hs-flow-space-sm`                                                             | `0.25em`                                        | Space between list items and footer lines                        |
+| `--hs-flow-space-lg`                                                             | `1.5em`                                         | Space below the device table                                     |
+| `--hs-list-indent`                                                               | `2em`                                           | List indent                                                      |
+| `--hs-font-size`                                                                 | `1rem`                                          | Text and buttons; below `1rem`, iOS zooms into inputs            |
+| `--hs-font-size-sm`                                                              | `0.8em`                                         | Footer                                                           |
+| `--hs-font-size-label`                                                           | `0.8rem`                                        | The "or" divider                                                 |
+| `--hs-font-size-code`                                                            | `0.85em`                                        | Code                                                             |
+| `--hs-font-size-lg`, `-xl`, `-2xl`                                               | `1.25em`, `1.5625em`, `2em`                     | `h3` and box headings, `h2`, `h1`                                |
+| `--hs-font-weight-light`, `-regular`, `-medium`, `-semibold`, `-bold`            | `300`, `400`, `500`, `600`, `700`               | `h1` and `h2`, `h3`, buttons, table labels, box headings         |
+| `--hs-line-height`                                                               | `1.6`                                           | Text                                                             |
+| `--hs-line-height-code`                                                          | `1.4`                                           | Code blocks                                                      |
+| `--hs-line-height-h1`, `-h2`, `-h3`                                              | `1.3`, `1.4`, `1.5`                             | Headings                                                         |
+| `--hs-letter-spacing-heading`, `--hs-letter-spacing-label`                       | `-0.01em`, `0.05em`                             | Headings, the "or" divider                                       |
+| `--hs-margin-h1`, `--hs-margin-h2`, `--hs-margin-h3`                             | `0 0 1.25em`, `2.4em 0 0.64em`, `2em 0 0.8em`   | Heading margins                                                  |
+| `--hs-margin-h1-top`                                                             | `2em`                                           | Space above an `h1` that is not the first element                |
+| `--hs-radius-xs`, `-sm`, `-md`, `-lg`                                            | `0.1rem`, `0.25rem`, `0.375rem`, `0.5rem`       | Inline code, code blocks, buttons and inputs, boxes              |
+| `--hs-border-width`                                                              | `1px`                                           | Borders, table rules, the "or" divider                           |
+| `--hs-link-underline`, `--hs-link-underline-hover`, `--hs-link-underline-offset` | `1px`, `2px`, `2px`                             | Link underline                                                   |
+| `--hs-focus-ring-width`, `--hs-focus-ring-offset`, `--hs-focus-ring-radius`      | `2px`                                           | Keyboard focus ring                                              |
+| `--hs-page-width`                                                                | `800px`                                         | Page width, at most 90% of the window                            |
+| `--hs-logo-width`, `--hs-logo-width-mobile`                                      | `400px`, `200px`                                | Logo width, above and below a `768px` wide window                |
+| `--hs-input-width`                                                               | `280px`                                         | Text inputs                                                      |
+| `--hs-touch-target`                                                              | `44px`                                          | Minimum height of buttons and button links                       |
+| `--hs-code-padding`, `--hs-code-block-padding`                                   | `0 0.29em`, `0.77em 1.18em`                     | Inline code, code blocks                                         |
+| `--hs-button-padding`                                                            | `var(--hs-space-3) var(--hs-space-6)`           | Buttons and button links                                         |
+| `--hs-button-shadow`                                                             | `0 1px 3px rgba(0, 0, 0, 0.12)`                 | Button shadow on hover                                           |
+| `--hs-transition`                                                                | `150ms ease-out`                                | Button colour change                                             |
+
+The `768px` breakpoint stays in the rule: CSS does not allow variables in a media query.
 
 !!! warning "Reverse proxy"
 
@@ -283,7 +362,7 @@ Some parts of the pages are not settings, on purpose:
 - **The `/debug/ping` page** is on `metrics_listen_addr`, for administrators. Its text is not themed beyond the layout.
 - **`lang="en"`** on every page. The built-in text is English; declaring another language without translating it would
   mislead browsers and screen readers. A page or layout you write yourself can set its own.
-- **Sizes and spacing** are plain values in `style.css`. A stylesheet in `theme.stylesheets` loads after it and can
-  override any rule.
+- **Sizes and spacing** are [stylesheet variables](#stylesheet-variables), not `theme` settings: a stylesheet in
+  `theme.stylesheets` sets them. A config key for each would only repeat CSS.
 - **The commands on `auth_web.html`** are built by headscale so they match its CLI. A custom page can build its own from
   `Kind` and `AuthID`.

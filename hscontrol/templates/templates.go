@@ -31,7 +31,17 @@ import (
 //go:embed html/*.html
 var builtinFiles embed.FS
 
-var errNotDir = errors.New("is not a directory")
+var (
+	errNotDir         = errors.New("is not a directory")
+	errLogoDarkNoLogo = errors.New("needs web.theme.logo: the dark logo replaces it")
+)
+
+// builtinLogo and builtinLogoDark are the built-in logo's files under
+// [StaticPrefix], for a light and a dark colour scheme.
+const (
+	builtinLogo     = "headscale.svg"
+	builtinLogoDark = "headscale-dark.svg"
+)
 
 // Builtin is the built-in template files, the starting point for a
 // web.templates_dir.
@@ -53,6 +63,11 @@ type Site struct {
 
 	// Logo is web.theme.logo, a URL; empty shows no logo.
 	Logo string
+
+	// LogoDark is the logo for a dark colour scheme: web.theme.logo_dark,
+	// or the built-in dark logo with the built-in logo. Empty uses Logo.
+	// Commas and whitespace are percent-encoded, for a srcset attribute.
+	LogoDark string
 
 	// ServerURL is server_url, which clients log in to.
 	ServerURL string
@@ -390,9 +405,10 @@ type themeCheck struct {
 func newSite(cfg *types.Config) (*Site, error) {
 	theme := cfg.Web.Theme
 
-	checks := make([]themeCheck, 0, 5+len(theme.FontStylesheets)+len(theme.Stylesheets)) //nolint:mnd // the five below
+	checks := make([]themeCheck, 0, 6+len(theme.FontStylesheets)+len(theme.Stylesheets)) //nolint:mnd // the six below
 	checks = append(checks,
 		themeCheck{"logo", string(theme.Logo), new(types.WebURL)},
+		themeCheck{"logo_dark", string(theme.LogoDark), new(types.WebURL)},
 		themeCheck{"primary_color", string(theme.PrimaryColor), new(types.CSSColor)},
 		themeCheck{"primary_color_dark", string(theme.PrimaryColorDark), new(types.CSSColor)},
 		themeCheck{"font_family", string(theme.FontFamily), new(types.FontFamily)},
@@ -414,6 +430,10 @@ func newSite(cfg *types.Config) (*Site, error) {
 		}
 	}
 
+	if theme.LogoDark != "" && theme.Logo == "" {
+		return nil, fmt.Errorf("web.theme.logo_dark %q: %w", theme.LogoDark, errLogoDarkNoLogo)
+	}
+
 	urls := func(us []types.WebURL) []string {
 		out := make([]string, len(us))
 		for i, u := range us {
@@ -426,6 +446,7 @@ func newSite(cfg *types.Config) (*Site, error) {
 	return &Site{
 		Name:             cmp.Or(theme.Name, types.DefaultWebTheme().Name),
 		Logo:             string(theme.Logo),
+		LogoDark:         logoDark(cfg),
 		ServerURL:        cfg.ServerURL,
 		PrimaryColor:     string(theme.PrimaryColor),
 		PrimaryColorDark: string(theme.PrimaryColorDark),
@@ -438,6 +459,36 @@ func newSite(cfg *types.Config) (*Site, error) {
 		ProfileFileName:  profileFileName(cmp.Or(theme.Name, types.DefaultWebTheme().Name)),
 		ThemeCSS:         themeCSS(theme),
 	}, nil
+}
+
+// srcsetEscaper percent-encodes the characters that split a srcset
+// attribute into candidates, so a URL with them stays one URL; a server
+// reads the encoded URL the same.
+var srcsetEscaper = strings.NewReplacer(",", "%2C", " ", "%20", "\t", "%09", "\n", "%0A", "\r", "%0D", "\f", "%0C")
+
+// logoDark is the logo of cfg for a dark colour scheme: logo_dark, else
+// the built-in dark logo when logo is the built-in one. A web.static_dir
+// that replaces headscale.svg without a headscale-dark.svg keeps its
+// logo in both schemes.
+func logoDark(cfg *types.Config) string {
+	theme := cfg.Web.Theme
+	if theme.LogoDark != "" || theme.Logo != types.DefaultWebTheme().Logo {
+		return srcsetEscaper.Replace(string(theme.LogoDark))
+	}
+
+	if dir := cfg.Web.StaticDir; dir != "" {
+		has := func(name string) bool {
+			_, err := os.Stat(filepath.Join(cfg.AbsPath(dir), name))
+
+			return err == nil
+		}
+
+		if has(builtinLogo) && !has(builtinLogoDark) {
+			return ""
+		}
+	}
+
+	return StaticPrefix + builtinLogoDark
 }
 
 // profileFileName turns a site name into a file name for the macOS

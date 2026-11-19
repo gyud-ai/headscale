@@ -222,6 +222,54 @@ func TestThemeNoLogo(t *testing.T) {
 	assert.Contains(t, html, "<title>Windows - X</title>")
 }
 
+func TestThemeLogoDark(t *testing.T) {
+	picture := func(dark, light, name string) string {
+		return `<picture><source srcset="` + dark + `" media="(prefers-color-scheme: dark)">` +
+			`<img class="headscale-logo" src="` + light + `" alt="` + name + `"></picture>`
+	}
+
+	t.Run("configured", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{Theme: types.WebThemeConfig{
+			Name: "X", Logo: "/static/logo.svg", LogoDark: "https://cdn.example.com/logo-dark.svg",
+		}})
+		assert.Contains(t, mustRender(t)(r.Windows()), picture("https://cdn.example.com/logo-dark.svg", "/static/logo.svg", "X"))
+	})
+
+	t.Run("built-in logo has a built-in dark one", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{})
+		assert.Contains(t, mustRender(t)(r.Windows()), picture("/static/headscale-dark.svg", "/static/headscale.svg", "Headscale"))
+	})
+
+	t.Run("own logo without a dark one", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{Theme: types.WebThemeConfig{Name: "X", Logo: "/static/logo.svg"}})
+		html := mustRender(t)(r.Windows())
+		assert.NotContains(t, html, "<picture>")
+		assert.Contains(t, html, `<img class="headscale-logo" src="/static/logo.svg" alt="X">`)
+	})
+
+	t.Run("static_dir replaces headscale.svg only", func(t *testing.T) {
+		dir := writeFiles(t, map[string]string{"headscale.svg": "<svg/>"})
+		r := newTestRenderer(t, types.WebConfig{StaticDir: dir})
+		html := mustRender(t)(r.Windows())
+		assert.NotContains(t, html, "<picture>", "the replaced logo shows in both schemes")
+		assert.Contains(t, html, `<img class="headscale-logo" src="/static/headscale.svg" alt="Headscale">`)
+	})
+
+	t.Run("static_dir replaces both", func(t *testing.T) {
+		dir := writeFiles(t, map[string]string{"headscale.svg": "<svg/>", "headscale-dark.svg": "<svg/>"})
+		r := newTestRenderer(t, types.WebConfig{StaticDir: dir})
+		assert.Contains(t, mustRender(t)(r.Windows()), picture("/static/headscale-dark.svg", "/static/headscale.svg", "Headscale"))
+	})
+
+	t.Run("srcset keeps a URL with a comma and a space whole", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{Theme: types.WebThemeConfig{
+			Name: "X", Logo: "/static/logo.svg", LogoDark: "/static/a,b c.svg",
+		}})
+		html := mustRender(t)(r.Windows())
+		assert.Contains(t, html, `<source srcset="/static/a%2Cb%20c.svg" media`)
+	})
+}
+
 // TestThemeRejectsInvalid: a theme built in Go skips the loader's checks;
 // New must refuse what would break out of the stylesheet or the page.
 func TestThemeRejectsInvalid(t *testing.T) {
@@ -231,6 +279,8 @@ func TestThemeRejectsInvalid(t *testing.T) {
 		"font":       {FontFamily: "x</style><script>"},
 		"code font":  {CodeFontFamily: "x;y"},
 		"logo":       {Logo: "javascript:alert(1)"},
+		"dark logo":  {Logo: "/static/logo.svg", LogoDark: "javascript:alert(1)"},
+		"dark only":  {LogoDark: "/static/logo-dark.svg"},
 		"stylesheet": {Stylesheets: []types.WebURL{"//evil.example.com/x.css"}},
 		"font sheet": {FontStylesheets: []types.WebURL{"fonts.css"}},
 	} {

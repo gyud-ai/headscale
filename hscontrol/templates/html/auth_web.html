@@ -1,0 +1,12 @@
+{{- /*
+  auth_web is /register/{id} and /auth/{id} without OpenID Connect: the
+  admin command that approves the request. .Page has Title, Description
+  and Command.
+*/ -}}
+{{template "layout" .}}
+{{- define "title"}}{{.Page.Title}} - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<h1>{{.Page.Title}}</h1>
+<p>{{.Page.Description}}</p>
+<pre><code>{{.Page.Command}}</code></pre>
+{{- end}}

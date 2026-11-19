@@ -5,6 +5,7 @@ import (
 
 	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAuthErrorTemplate(t *testing.T) {
@@ -15,7 +16,7 @@ func TestAuthErrorTemplate(t *testing.T) {
 		{
 			name: "bad_request",
 			result: templates.AuthErrorResult{
-				Title:   "Headscale - Error",
+				Title:   "Error",
 				Heading: "Bad Request",
 				Message: "The request could not be processed. Please try again.",
 			},
@@ -23,7 +24,7 @@ func TestAuthErrorTemplate(t *testing.T) {
 		{
 			name: "forbidden",
 			result: templates.AuthErrorResult{
-				Title:   "Headscale - Error",
+				Title:   "Error",
 				Heading: "Forbidden",
 				Message: "You are not authorized. Please contact your administrator.",
 			},
@@ -31,7 +32,7 @@ func TestAuthErrorTemplate(t *testing.T) {
 		{
 			name: "gone_expired",
 			result: templates.AuthErrorResult{
-				Title:   "Headscale - Error",
+				Title:   "Error",
 				Heading: "Gone",
 				Message: "Your session has expired. Please try again.",
 			},
@@ -39,7 +40,7 @@ func TestAuthErrorTemplate(t *testing.T) {
 		{
 			name: "internal_server_error",
 			result: templates.AuthErrorResult{
-				Title:   "Headscale - Error",
+				Title:   "Error",
 				Heading: "Internal Server Error",
 				Message: "Something went wrong. Please try again later.",
 			},
@@ -48,22 +49,25 @@ func TestAuthErrorTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html := templates.AuthError(tt.result).Render()
+			b, err := (*templates.Renderer)(nil).AuthError(tt.result)
+			require.NoError(t, err)
+
+			html := string(b)
 
 			// Verify the HTML contains expected structural elements
 			assert.Contains(t, html, "<!DOCTYPE html>")
-			assert.Contains(t, html, "<title>"+tt.result.Title+"</title>")
+			assert.Contains(t, html, "<title>"+tt.result.Title+" - Headscale</title>")
 			assert.Contains(t, html, tt.result.Heading)
 			assert.Contains(t, html, tt.result.Message)
 
-			// Verify Material for MkDocs design system CSS is present
-			assert.Contains(t, html, "Material for MkDocs")
+			// Verify the stylesheets and the logo are linked
+			assert.Contains(t, html, `<link rel="stylesheet" href="/static/style.css">`)
 			assert.Contains(t, html, "Roboto")
-			assert.Contains(t, html, ".md-typeset")
+			assert.Contains(t, html, `class="md-typeset"`)
+			assert.Contains(t, html, `<img class="headscale-logo" src="/static/headscale.svg" alt="Headscale">`)
 
 			// Verify SVG elements are present
 			assert.Contains(t, html, "<svg")
-			assert.Contains(t, html, "class=\"headscale-logo\"")
 			assert.Contains(t, html, "id=\"error-icon\"")
 
 			// Verify no success checkbox icon
@@ -80,7 +84,7 @@ func TestAuthSuccessTemplate(t *testing.T) {
 		{
 			name: "node_registered",
 			result: templates.AuthSuccessResult{
-				Title:   "Headscale - Node Registered",
+				Title:   "Node Registered",
 				Heading: "Node registered",
 				Verb:    "Registered",
 				User:    "newuser@example.com",
@@ -90,7 +94,7 @@ func TestAuthSuccessTemplate(t *testing.T) {
 		{
 			name: "node_reauthenticated",
 			result: templates.AuthSuccessResult{
-				Title:   "Headscale - Node Reauthenticated",
+				Title:   "Node Reauthenticated",
 				Heading: "Node reauthenticated",
 				Verb:    "Reauthenticated",
 				User:    "test@example.com",
@@ -100,7 +104,7 @@ func TestAuthSuccessTemplate(t *testing.T) {
 		{
 			name: "ssh_session_authorized",
 			result: templates.AuthSuccessResult{
-				Title:   "Headscale - SSH Session Authorized",
+				Title:   "SSH Session Authorized",
 				Heading: "SSH session authorized",
 				Verb:    "Authorized",
 				User:    "test@example.com",
@@ -111,24 +115,27 @@ func TestAuthSuccessTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html := templates.AuthSuccess(tt.result).Render()
+			b, err := (*templates.Renderer)(nil).AuthSuccess(tt.result)
+			require.NoError(t, err)
+
+			html := string(b)
 
 			// Verify the HTML contains expected structural elements
 			assert.Contains(t, html, "<!DOCTYPE html>")
-			assert.Contains(t, html, "<title>"+tt.result.Title+"</title>")
+			assert.Contains(t, html, "<title>"+tt.result.Title+" - Headscale</title>")
 			assert.Contains(t, html, tt.result.Heading)
 			assert.Contains(t, html, tt.result.Verb+" as ")
 			assert.Contains(t, html, tt.result.User)
 			assert.Contains(t, html, tt.result.Message)
 
-			// Verify Material for MkDocs design system CSS is present
-			assert.Contains(t, html, "Material for MkDocs")
+			// Verify the stylesheets and the logo are linked
+			assert.Contains(t, html, `<link rel="stylesheet" href="/static/style.css">`)
 			assert.Contains(t, html, "Roboto")
-			assert.Contains(t, html, ".md-typeset")
+			assert.Contains(t, html, `class="md-typeset"`)
+			assert.Contains(t, html, `<img class="headscale-logo" src="/static/headscale.svg" alt="Headscale">`)
 
 			// Verify SVG elements are present
 			assert.Contains(t, html, "<svg")
-			assert.Contains(t, html, "class=\"headscale-logo\"")
 			assert.Contains(t, html, "id=\"checkbox\"")
 		})
 	}

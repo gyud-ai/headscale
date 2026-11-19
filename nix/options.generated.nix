@@ -978,6 +978,117 @@ in
       example = true;
     };
   };
+  web = {
+    templates_dir = lib.mkOption {
+      type = t.readFile;
+      default = "";
+      description = ''
+        A directory of Go html/template files, relative to the configuration file. A file named like a built-in template, such as `layout.html` or `apple.html`, replaces it; any other `.html` file is loaded into every page, where it can redefine a block of the layout. Read at startup and again on SIGHUP. Empty uses the built-in templates.
+
+        On NixOS, paths must be absolute.
+      '';
+      example = "/etc/headscale/web/templates";
+    };
+    static_dir = lib.mkOption {
+      type = t.readFile;
+      default = "";
+      description = ''
+        A directory served under `/static/`, relative to the configuration file. A file named like a built-in one, such as `style.css`, `headscale.svg` or `favicon.png`, replaces it. Files are read on each request. Empty serves only the built-in files.
+
+        On NixOS, paths must be absolute.
+      '';
+      example = "/etc/headscale/web/static";
+    };
+    theme = {
+      name = lib.mkOption {
+        type = lib.types.str;
+        default = "Headscale";
+        description = ''
+          The product name in page titles, page text, the footer and the Apple configuration profile.
+        '';
+        example = "Example VPN";
+      };
+      logo = lib.mkOption {
+        type = lib.types.str;
+        default = "/static/headscale.svg";
+        description = ''
+          The image at the top of every page: an `http://` or `https://` URL, or a path on this server such as a file in `web.static_dir`. Empty shows no logo.
+        '';
+        example = "/static/logo.svg";
+      };
+      primary_color = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          The colour of links, buttons and focus rings, as `#rrggbb`. Empty keeps the built-in blue.
+        '';
+        example = "#0a7d5a";
+      };
+      primary_color_dark = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Replaces `web.theme.primary_color` when the browser asks for a dark colour scheme. Empty uses `web.theme.primary_color`.
+        '';
+        example = "#4fd1a5";
+      };
+      font_stylesheets = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "https://fonts.googleapis.com/css2?family=Roboto:wght@300..700"
+          "https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap"
+        ];
+        description = ''
+          The stylesheets that load the fonts, before the page's own styles. The default loads Roboto and Roboto Mono from Google Fonts; `[]` loads none, and the pages fall back to system fonts unless `web.theme.font_family` names fonts the browser has.
+        '';
+        example = [
+          "/static/fonts/inter.css"
+        ];
+      };
+      font_family = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          The CSS font list for text, as in `"Inter", sans-serif`. Empty uses Roboto, then system fonts.
+        '';
+        example = "\"Inter\", sans-serif";
+      };
+      code_font_family = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          The CSS font list for commands and code. Empty uses Roboto Mono, then system monospace fonts.
+        '';
+        example = "\"JetBrains Mono\", monospace";
+      };
+      stylesheets = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = ''
+          Extra stylesheets loaded after the built-in one, so their rules win: an `http://` or `https://` URL, or a path on this server such as a file in `web.static_dir`.
+        '';
+        example = [
+          "/static/brand.css"
+        ];
+      };
+      footer_text = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link.
+        '';
+        example = "Operated by the Example IT team";
+      };
+      hide_powered_by = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Removes the "Powered by Headscale" link from the footer.
+        '';
+        example = true;
+      };
+    };
+  };
   tuning = {
     batch_change_delay = lib.mkOption {
       type = t.duration;

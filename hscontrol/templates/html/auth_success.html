@@ -1,0 +1,19 @@
+{{- /*
+  auth_success follows a confirmed login: a registered or
+  reauthenticated node, or an approved SSH session. .Page has Title,
+  Heading, Verb, User and Message.
+*/ -}}
+{{template "layout" .}}
+{{- define "title"}}{{.Page.Title}} - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<div class="hs-box hs-box--success" role="status" aria-live="polite">
+{{template "icon_success"}}
+<div><strong class="hs-box__heading">{{.Page.Heading}}</strong>{{.Page.Verb}} as <strong>{{.Page.User}}</strong>. {{.Page.Message}}</div>
+</div>
+<h2>Getting started</h2>
+<p>Check out the documentation to learn more about headscale and Tailscale:</p>
+<ul>
+<li><a href="https://headscale.net/stable/" rel="noreferrer noopener" target="_blank">Headscale documentation</a></li>
+<li><a href="https://tailscale.com/docs" rel="noreferrer noopener" target="_blank">Tailscale docs</a></li>
+</ul>
+{{- end}}

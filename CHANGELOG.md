@@ -92,6 +92,17 @@ the Tailscale admin console. `GET /api/v2/device/{id}/update-status` reports the
 update. Both answer as Tailscale does: a node that does not allow remote updates,
 is not connected, or refuses is "not found". See [the client docs](https://headscale.net/stable/about/clients/#update-clients). [#3632](https://github.com/juanfont/headscale/pull/3632)
 
+### Branded web pages
+
+The pages headscale serves to browsers (`/apple`, `/windows`, the registration and
+OpenID Connect login pages, and `/`) can carry your own name, logo, colours and
+fonts, set in the new `web.theme` section. `web.static_dir` serves your logo,
+stylesheets and fonts under `/static/`, and `web.templates_dir` replaces any page,
+the shared layout, or one block of it with Go `html/template` files.
+`headscale generate web` writes the built-in templates as a starting point,
+`headscale check all` validates them, and a SIGHUP reloads them. See
+[Branding](https://headscale.net/stable/ref/branding/).
+
 ### BREAKING
 
 #### Database
@@ -189,6 +200,8 @@ is not connected, or refuses is "not found". See [the client docs](https://heads
 
 ### Changes
 
+- The web pages link their stylesheet and logo from `/static/` instead of inlining them; a reverse proxy in front of headscale must forward `/static/`
+- Web page titles read "page - Headscale", with `web.theme.name` in place of "Headscale"
 - A SIGHUP now reloads the certificate from `tls.cert_path` and `tls.key_path` without a restart; a certificate that cannot be loaded or is not valid now is logged as an error and the previous one keeps serving [#3027](https://github.com/juanfont/headscale/issues/3027)
 - The NixOS module's `headscale` service now supports `systemctl reload`
 - DERP map refreshes keep the node order. Clients keep their home relay. [#3649](https://github.com/juanfont/headscale/pull/3649)

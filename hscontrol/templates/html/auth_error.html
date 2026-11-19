@@ -1,0 +1,13 @@
+{{- /*
+  auth_error is shown when a browser step fails: an OpenID Connect
+  callback, a spent registration link, a refused confirmation. .Page has
+  Title, Heading and Message; the details stay in the server log.
+*/ -}}
+{{template "layout" .}}
+{{- define "title"}}{{.Page.Title}} - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<div class="hs-box hs-box--error" role="alert" aria-live="assertive">
+{{template "icon_error"}}
+<div><strong class="hs-box__heading">{{.Page.Heading}}</strong>{{.Page.Message}}</div>
+</div>
+{{- end}}

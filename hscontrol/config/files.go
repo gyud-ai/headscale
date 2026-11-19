@@ -14,6 +14,7 @@ import (
 	"github.com/juanfont/headscale/hscontrol/derp"
 	"github.com/juanfont/headscale/hscontrol/dns"
 	policyv2 "github.com/juanfont/headscale/hscontrol/policy/v2"
+	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"tailscale.com/types/key"
 )
@@ -62,6 +63,18 @@ func Files(cfg *types.Config) []File {
 			Path:  c + ", " + k,
 			Check: func() error { _, err := tls.LoadX509KeyPair(c, k); return err },
 		})
+	}
+
+	if d := cfg.Web.TemplatesDir; d != "" {
+		files = append(files, File{
+			Key: "web.templates_dir", Path: cfg.AbsPath(d),
+			Check: func() error { return templates.CheckTemplates(cfg) },
+		})
+	}
+
+	if d := cfg.Web.StaticDir; d != "" {
+		p := cfg.AbsPath(d)
+		files = append(files, File{Key: "web.static_dir", Path: p, Check: func() error { return templates.CheckStaticDir(p) }})
 	}
 
 	noise := cfg.AbsPath(cfg.Noise.PrivateKeyPath)

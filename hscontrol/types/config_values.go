@@ -141,6 +141,113 @@ func (u *HTTPURL) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// WebURL is "", an absolute http:// or https:// URL with a host, or a path
+// on this server starting with a single "/", such as "/static/logo.svg".
+// Pages link it from a browser, so a relative path or another scheme is
+// refused.
+type WebURL string
+
+func (u *WebURL) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s != "" && !isWebURL(s) {
+		return &ConfigError{
+			Reason: `is not an http:// or https:// URL or a path starting with "/"`,
+			Hint:   `write a path on this server, e.g. "/static/logo.svg", or a full URL, e.g. "https://cdn.example.com/brand.css"`,
+		}
+	}
+
+	*u = WebURL(s)
+
+	return nil
+}
+
+func isWebURL(s string) bool {
+	p, err := url.Parse(s)
+	if err != nil {
+		return false
+	}
+
+	if strings.HasPrefix(s, "/") {
+		// "//host/x" is protocol-relative and "/\host" is read as one by
+		// browsers: both leave this server.
+		return p.Scheme == "" && p.Host == "" && !strings.HasPrefix(s, "//") && !strings.HasPrefix(s, `/\`)
+	}
+
+	return (p.Scheme == "http" || p.Scheme == "https") && p.Hostname() != ""
+}
+
+// CSSColor is "" or a CSS hex colour: #rgb, #rgba, #rrggbb or #rrggbbaa.
+// Only hex is accepted so the value can be written into a stylesheet
+// as is.
+type CSSColor string
+
+func (c *CSSColor) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s != "" && !isHexColor(s) {
+		return &ConfigError{
+			Reason: "is not a hex colour",
+			Hint:   `write it as "#rrggbb", e.g. "#4051b5"`,
+		}
+	}
+
+	*c = CSSColor(s)
+
+	return nil
+}
+
+func isHexColor(s string) bool {
+	hex, ok := strings.CutPrefix(s, "#")
+	if !ok {
+		return false
+	}
+
+	switch len(hex) {
+	case 3, 4, 6, 8:
+	default:
+		return false
+	}
+
+	for _, r := range hex {
+		if !strings.ContainsRune("0123456789abcdefABCDEF", r) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// FontFamily is "" or a CSS font-family list, such as `"Inter", sans-serif`:
+// letters, digits, spaces, commas, hyphens, underscores and balanced
+// quotes. Anything else, such as ";" or "}", is refused so the value can be
+// written into a stylesheet as is.
+type FontFamily string
+
+func (f *FontFamily) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s != "" && !isFontFamily(s) {
+		return &ConfigError{
+			Reason: "is not a CSS font list",
+			Hint:   `use font names, quoted when they contain spaces, separated by commas, e.g. "\"Inter\", sans-serif"`,
+		}
+	}
+
+	*f = FontFamily(s)
+
+	return nil
+}
+
+func isFontFamily(s string) bool {
+	for _, r := range s {
+		ok := r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' ||
+			strings.ContainsRune(` ,-_"'`, r)
+		if !ok {
+			return false
+		}
+	}
+
+	return strings.Count(s, `"`)%2 == 0 && strings.Count(s, `'`)%2 == 0
+}
+
 // ListenAddr is "" or a TCP host:port address; the port may be "http" or
 // "https".
 type ListenAddr string

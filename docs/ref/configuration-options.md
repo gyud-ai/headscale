@@ -3141,6 +3141,7 @@ The look of the pages headscale serves to browsers: the client setup pages, the 
       theme:
         name: Headscale
         logo: /static/headscale.svg
+        logo_dark: ""
         primary_color: ""
         primary_color_dark: ""
         font_stylesheets:
@@ -3218,6 +3219,7 @@ The name, logo, colours and fonts of the pages, set without writing templates.
       theme:
         name: Headscale
         logo: /static/headscale.svg
+        logo_dark: ""
         primary_color: ""
         primary_color_dark: ""
         font_stylesheets:
@@ -3284,6 +3286,34 @@ The image at the top of every page: an `http://` or `https://` URL, or a path on
 
     ```nix
     services.headscale.settings.web.theme.logo = "/static/logo.svg";
+    ```
+
+#### `web.theme.logo_dark` { #web.theme.logo_dark data-toc-label="logo_dark" }
+
+- **Type:** [string](#type-string)
+- **Default:** `""`
+- **Env:** `HEADSCALE_WEB_THEME_LOGO_DARK`
+
+Replaces [`web.theme.logo`](#web.theme.logo) when the browser asks for a dark colour scheme, as [`web.theme.primary_color_dark`](#web.theme.primary_color_dark) does for the colour. Needs [`web.theme.logo`](#web.theme.logo). Empty uses [`web.theme.logo`](#web.theme.logo) for both, except that the built-in logo has a built-in dark version.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      theme:
+        logo_dark: /static/logo-dark.svg
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_THEME_LOGO_DARK=/static/logo-dark.svg
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.theme.logo_dark = "/static/logo-dark.svg";
     ```
 
 #### `web.theme.primary_color` { #web.theme.primary_color data-toc-label="primary_color" }

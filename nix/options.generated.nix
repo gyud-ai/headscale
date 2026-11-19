@@ -1016,6 +1016,14 @@ in
         '';
         example = "/static/logo.svg";
       };
+      logo_dark = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Replaces `web.theme.logo` when the browser asks for a dark colour scheme, as `web.theme.primary_color_dark` does for the colour. Needs `web.theme.logo`. Empty uses `web.theme.logo` for both, except that the built-in logo has a built-in dark version.
+        '';
+        example = "/static/logo-dark.svg";
+      };
       primary_color = lib.mkOption {
         type = lib.types.str;
         default = "";

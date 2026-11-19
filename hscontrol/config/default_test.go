@@ -128,6 +128,17 @@ func TestValidateGoData(t *testing.T) {
 			wantErr: "unix_socket_permission is not a quoted octal file mode",
 		},
 		{
+			name:    "dark logo without a logo",
+			set:     func(c *types.Config) { c.Web.Theme.Logo, c.Web.Theme.LogoDark = "", "/static/logo-dark.svg" },
+			wantErr: "web.theme.logo_dark is set without web.theme.logo",
+		},
+		{
+			name: "dark logo",
+			set: func(c *types.Config) {
+				c.Web.Theme.Logo, c.Web.Theme.LogoDark = "/static/logo.svg", "/static/logo-dark.svg"
+			},
+		},
+		{
 			name:    "listen address",
 			set:     func(c *types.Config) { c.Addr = "nowhere" },
 			wantErr: "listen_addr is not a host:port address",

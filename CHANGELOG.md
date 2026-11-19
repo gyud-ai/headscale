@@ -204,6 +204,7 @@ the shared layout, or one block of it with Go `html/template` files.
 - Web page titles read "page - Headscale", with `web.theme.name` in place of "Headscale"
 - `web.theme.hide_powered_by` also hides the "Getting started" documentation links on the login success page; they are the `getting_started` template block
 - The macOS configuration profiles download as `<name>_macos.mobileconfig`, from `web.theme.name`
+- The web pages' stylesheet reads its sizes, spacing, radii, font sizes and weights from CSS variables (`--hs-space-4`, `--hs-radius-md`, `--hs-page-width`, ...), so a stylesheet in `web.theme.stylesheets` can change them in one place
 - A SIGHUP now reloads the certificate from `tls.cert_path` and `tls.key_path` without a restart; a certificate that cannot be loaded or is not valid now is logged as an error and the previous one keeps serving [#3027](https://github.com/juanfont/headscale/issues/3027)
 - The NixOS module's `headscale` service now supports `systemctl reload`
 - DERP map refreshes keep the node order. Clients keep their home relay. [#3649](https://github.com/juanfont/headscale/pull/3649)

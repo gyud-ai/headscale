@@ -208,8 +208,11 @@ const (
 	pageBlank           = "blank.html"
 )
 
+// componentsFile holds the small shared templates, such as the icons.
+const componentsFile = "components.html"
+
 // baseFiles are parsed into every page before the page itself.
-var baseFiles = []string{"layout.html", "components.html"}
+var baseFiles = []string{"layout.html", componentsFile}
 
 // samples is the data each page is rendered with when templates load, so
 // a template that names a missing field fails then, not on a user's

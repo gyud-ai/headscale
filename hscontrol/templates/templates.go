@@ -275,6 +275,22 @@ func parsePages(site *Site, custom map[string]string, dir string) (pageSet, load
 	}
 
 	base := template.New("").Funcs(template.FuncMap{"join": strings.Join})
+
+	// A components.html of its own replaces only the components it
+	// defines: the built-in ones go first, so a copy from an older
+	// version still has the components added since.
+	if _, ok := custom[componentsFile]; ok {
+		b, err := builtinFiles.ReadFile("html/" + componentsFile)
+		if err != nil {
+			return nil, loaded, err
+		}
+
+		_, err = base.New("built-in " + componentsFile).Parse(string(b))
+		if err != nil {
+			return nil, loaded, fmt.Errorf("web template built-in %s: %w", componentsFile, err)
+		}
+	}
+
 	for _, name := range slices.Concat(baseFiles, loaded.partials) {
 		err := parse(base, name)
 		if err != nil {

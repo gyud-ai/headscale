@@ -7,7 +7,10 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/juanfont/headscale/hscontrol/util"
 	"github.com/rs/zerolog"
@@ -217,9 +220,11 @@ func isHexColor(s string) bool {
 }
 
 // FontFamily is "" or a CSS font-family list, such as `"Inter", sans-serif`:
-// letters, digits, spaces, commas, hyphens, underscores and balanced
-// quotes. Anything else, such as ";" or "}", is refused so the value can be
-// written into a stylesheet as is.
+// font names separated by commas, each either quoted or one or more words
+// of letters, digits, hyphens and underscores that do not start with a
+// digit. Anything else, such as ";" or "}", is refused so the value can be
+// written into a stylesheet as is, and an empty name or a quote left open
+// is refused because the browser would drop the whole list.
 type FontFamily string
 
 func (f *FontFamily) UnmarshalText(text []byte) error {
@@ -245,7 +250,198 @@ func isFontFamily(s string) bool {
 		}
 	}
 
-	return strings.Count(s, `"`)%2 == 0 && strings.Count(s, `'`)%2 == 0
+	// Each pass reads one name and the comma after it.
+	for {
+		s = strings.TrimLeft(s, " ")
+		if s == "" {
+			return false // an empty name, as in "a,,b" or "a,"
+		}
+
+		if q := s[0]; q == '"' || q == '\'' {
+			// A quoted name ends at the same quote; the other quote and
+			// commas inside it are part of the name.
+			end := strings.IndexByte(s[1:], q)
+			if end < 0 || strings.TrimSpace(s[1:end+1]) == "" {
+				return false
+			}
+
+			s = strings.TrimLeft(s[end+2:], " ")
+			if s == "" {
+				return true
+			}
+
+			rest, ok := strings.CutPrefix(s, ",")
+			if !ok {
+				return false
+			}
+
+			s = rest
+
+			continue
+		}
+
+		name, rest, more := strings.Cut(s, ",")
+		if !isFontWords(name) {
+			return false
+		}
+
+		if !more {
+			return true
+		}
+
+		s = rest
+	}
+}
+
+// isFontWords reports whether name is an unquoted font name: words of
+// letters, digits, hyphens and underscores, none starting with a digit or
+// with a hyphen and a digit.
+func isFontWords(name string) bool {
+	words := strings.Fields(name)
+	if len(words) == 0 {
+		return false
+	}
+
+	for _, w := range words {
+		if strings.ContainsAny(w, `"'`) {
+			return false
+		}
+
+		d := strings.TrimPrefix(w, "-")
+		if d == "" || d[0] >= '0' && d[0] <= '9' {
+			return false
+		}
+	}
+
+	return true
+}
+
+// maxPlainTextLen is the most characters a [PlainText] may have: a page's
+// longest built-in sentence is about a hundred.
+const maxPlainTextLen = 500
+
+// PlainText is "" or a line of text shown on a page as written: html/template
+// escapes it, so markup shows as text. Control characters, which also break
+// the Apple profile's XML, and the Unicode controls that reorder text are
+// refused, as is a value over [maxPlainTextLen] characters.
+type PlainText string
+
+func (t *PlainText) UnmarshalText(text []byte) error {
+	err := checkPlainText(string(text))
+	if err != nil {
+		return err
+	}
+
+	*t = PlainText(text)
+
+	return nil
+}
+
+func checkPlainText(s string) *ConfigError {
+	if !utf8.ValidString(s) {
+		return &ConfigError{Reason: "is not valid UTF-8", Hint: "save the configuration as UTF-8"}
+	}
+
+	if n := utf8.RuneCountInString(s); n > maxPlainTextLen {
+		return &ConfigError{
+			Reason:  "is too long",
+			Detail:  fmt.Sprintf("%d characters", n),
+			Maximum: strconv.Itoa(maxPlainTextLen) + " characters",
+			Hint:    "shorten the text; a page shows it in one paragraph",
+		}
+	}
+
+	for _, r := range s {
+		switch {
+		case unicode.IsControl(r):
+			return &ConfigError{
+				Reason: "contains a control character",
+				Detail: fmt.Sprintf("U+%04X", r),
+				Hint:   `write the text on one line: a YAML block such as "|" ends with a line break, ">-" does not`,
+			}
+		case isBidiControl(r):
+			return &ConfigError{
+				Reason: "contains a Unicode control that reorders text",
+				Detail: fmt.Sprintf("U+%04X", r),
+				Hint:   "remove it: a browser would show the text in another order than it is written",
+			}
+		}
+	}
+
+	return nil
+}
+
+// isBidiControl reports whether r is a bidirectional embedding, override
+// or isolate, which reorder the text after them (CVE-2021-42574). The
+// marks U+200E and U+200F only set a direction and are allowed.
+func isBidiControl(r rune) bool {
+	return r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069'
+}
+
+// PageText is a line of text for a page, as [PlainText] but never blank:
+// a key left out keeps the built-in text. "{name}" in it stands for
+// web.theme.name; any other "{" is refused, so a misspelt placeholder
+// fails at load instead of showing on a page.
+type PageText string
+
+// PageTextPlaceholders are the placeholders a [PageText] may hold.
+var PageTextPlaceholders = []string{"{name}"}
+
+func (t *PageText) UnmarshalText(text []byte) error {
+	s := string(text)
+	if strings.TrimSpace(s) == "" {
+		return &ConfigError{
+			Reason: "is blank",
+			Hint:   "remove the key to keep the built-in text, or write the text to show",
+		}
+	}
+
+	err := checkPlainText(s)
+	if err != nil {
+		return err
+	}
+
+	for i := strings.IndexByte(s, '{'); i >= 0; i = strings.IndexByte(s, '{') {
+		ph, _, closed := strings.Cut(s[i:], "}")
+		if !closed || !slices.Contains(PageTextPlaceholders, ph+"}") {
+			if closed {
+				ph += "}"
+			}
+
+			return &ConfigError{
+				Reason:  "has an unknown placeholder",
+				Detail:  clipForError(ph),
+				Allowed: PageTextPlaceholders,
+				Hint:    `"{" starts a placeholder; use one of the allowed ones, or remove the "{"`,
+			}
+		}
+
+		s = s[i+len(ph)+1:]
+	}
+
+	*t = PageText(text)
+
+	return nil
+}
+
+// Expand returns t with its placeholders replaced: {name} by name.
+func (t PageText) Expand(name string) string {
+	return strings.ReplaceAll(string(t), "{name}", name)
+}
+
+// clipForError shortens s to at most 40 bytes for an error message.
+func clipForError(s string) string {
+	const limit = 40
+	if len(s) <= limit {
+		return s
+	}
+
+	cut := limit
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+
+	return s[:cut] + "..."
 }
 
 // ListenAddr is "" or a TCP host:port address; the port may be "http" or

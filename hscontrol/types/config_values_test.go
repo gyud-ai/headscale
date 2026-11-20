@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -15,6 +16,43 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestDefaultWebText: every built-in text is set and passes the checks a
+// configured one gets, and WithDefaults fills only what is empty.
+func TestDefaultWebText(t *testing.T) {
+	cfg := Config{Web: WebConfig{Text: DefaultWebText()}}
+
+	n := 0
+
+	for _, f := range ConfigFields(&cfg) {
+		if !strings.HasPrefix(f.Path, "web.text.") {
+			continue
+		}
+
+		n++
+
+		require.Equal(t, reflect.TypeFor[PageText](), f.Value.Type(), f.Path)
+		require.NoError(t, new(PageText).UnmarshalText([]byte(f.Value.String())), f.Path)
+	}
+
+	assert.Equal(t, 29, n, "web.text keys")
+
+	assert.Equal(t, DefaultWebText(), WebTextConfig{}.WithDefaults())
+
+	var set WebTextConfig
+
+	set.AuthError.Expired.Heading = "Too slow"
+
+	got := set.WithDefaults()
+	assert.Equal(t, PageText("Too slow"), got.AuthError.Expired.Heading)
+	assert.Equal(t, DefaultWebText().AuthError.Expired.Message, got.AuthError.Expired.Message)
+}
+
+func TestPageTextExpand(t *testing.T) {
+	assert.Equal(t, "Welcome to Example VPN, Example VPN", PageText("Welcome to {name}, {name}").Expand("Example VPN"))
+	assert.Equal(t, "no placeholder", PageText("no placeholder").Expand("x"))
+	assert.Equal(t, "{name}", PageText("{name}").Expand("{name}"), "a name is not expanded again")
+}
 
 func TestConfigValues(t *testing.T) {
 	tests := []struct {
@@ -72,6 +110,50 @@ func TestConfigValues(t *testing.T) {
 		{name: "fontfamily/brace", dst: new(FontFamily), in: "Inter}body{", wantErr: "is not a CSS font list"},
 		{name: "fontfamily/tag", dst: new(FontFamily), in: "</style><script>", wantErr: "is not a CSS font list"},
 		{name: "fontfamily/unbalanced quote", dst: new(FontFamily), in: `"Inter, sans-serif`, wantErr: "is not a CSS font list"},
+		{name: "fontfamily/one name", dst: new(FontFamily), in: "Inter", want: FontFamily("Inter")},
+		{name: "fontfamily/unquoted words", dst: new(FontFamily), in: "Noto Sans, sans-serif", want: FontFamily("Noto Sans, sans-serif")},
+		{name: "fontfamily/comma in quotes", dst: new(FontFamily), in: `"A, B", serif`, want: FontFamily(`"A, B", serif`)},
+		{name: "fontfamily/other quote inside", dst: new(FontFamily), in: `"O'Neil Sans"`, want: FontFamily(`"O'Neil Sans"`)},
+		{name: "fontfamily/digit after first letter", dst: new(FontFamily), in: "Font2, x-1", want: FontFamily("Font2, x-1")},
+		{name: "fontfamily/quotes interleaved", dst: new(FontFamily), in: `"a'"b'`, wantErr: "is not a CSS font list"},
+		{name: "fontfamily/one single-quoted name", dst: new(FontFamily), in: `'Inter", "x'`, want: FontFamily(`'Inter", "x'`)},
+		{name: "fontfamily/quote inside unquoted name", dst: new(FontFamily), in: `In"ter"`, wantErr: "is not a CSS font list"},
+		{name: "fontfamily/two quoted without comma", dst: new(FontFamily), in: `"a" "b"`, wantErr: "is not a CSS font list"},
+		{name: "fontfamily/blank", dst: new(FontFamily), in: "   ", wantErr: "is not a CSS font list"},
+		{name: "fontfamily/commas only", dst: new(FontFamily), in: ",,,", wantErr: "is not a CSS font list"},
+		{name: "fontfamily/empty name", dst: new(FontFamily), in: "Inter,,serif", wantErr: "is not a CSS font list"},
+		{name: "fontfamily/trailing comma", dst: new(FontFamily), in: "Inter,", wantErr: "is not a CSS font list"},
+		{name: "fontfamily/empty quotes", dst: new(FontFamily), in: `""`, wantErr: "is not a CSS font list"},
+		{name: "fontfamily/blank quotes", dst: new(FontFamily), in: `"  ", serif`, wantErr: "is not a CSS font list"},
+		{name: "fontfamily/digits", dst: new(FontFamily), in: "123", wantErr: "is not a CSS font list"},
+		{name: "fontfamily/word starting with digit", dst: new(FontFamily), in: "Noto 2Sans", wantErr: "is not a CSS font list"},
+		{name: "fontfamily/hyphen digit", dst: new(FontFamily), in: "-1x", wantErr: "is not a CSS font list"},
+
+		{name: "plaintext/empty", dst: new(PlainText), in: "", want: PlainText("")},
+		{name: "plaintext/text", dst: new(PlainText), in: "Run by <IT> & co.", want: PlainText("Run by <IT> & co.")},
+		{name: "plaintext/unicode", dst: new(PlainText), in: "Ünïcödé \u540d\u524d \u200f", want: PlainText("Ünïcödé \u540d\u524d \u200f")},
+		{name: "plaintext/longest", dst: new(PlainText), in: strings.Repeat("é", maxPlainTextLen), want: PlainText(strings.Repeat("é", maxPlainTextLen))},
+		{name: "plaintext/too long", dst: new(PlainText), in: strings.Repeat("a", maxPlainTextLen+1), wantErr: "is too long"},
+		{name: "plaintext/control", dst: new(PlainText), in: "a\x01b", wantErr: "contains a control character"},
+		{name: "plaintext/line break", dst: new(PlainText), in: "text\n", wantErr: "contains a control character"},
+		{name: "plaintext/tab", dst: new(PlainText), in: "a\tb", wantErr: "contains a control character"},
+		{name: "plaintext/c1 control", dst: new(PlainText), in: "a\u0085b", wantErr: "contains a control character"},
+		{name: "plaintext/bidi override", dst: new(PlainText), in: "abc\u202edcba", wantErr: "reorders text"},
+		{name: "plaintext/bidi isolate", dst: new(PlainText), in: "abc\u2067x", wantErr: "reorders text"},
+		{name: "plaintext/invalid utf-8", dst: new(PlainText), in: "a\xffb", wantErr: "is not valid UTF-8"},
+
+		{name: "pagetext/text", dst: new(PageText), in: "Welcome to {name}!", want: PageText("Welcome to {name}!")},
+		{name: "pagetext/two placeholders", dst: new(PageText), in: "{name} by {name}", want: PageText("{name} by {name}")},
+		{name: "pagetext/closing brace alone", dst: new(PageText), in: "a } b", want: PageText("a } b")},
+		{name: "pagetext/markup", dst: new(PageText), in: "<b>bold</b>", want: PageText("<b>bold</b>")},
+		{name: "pagetext/empty", dst: new(PageText), in: "", wantErr: "is blank"},
+		{name: "pagetext/blank", dst: new(PageText), in: "  \u00a0 ", wantErr: "is blank"},
+		{name: "pagetext/unknown placeholder", dst: new(PageText), in: "Hello {user}", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/misspelt placeholder", dst: new(PageText), in: "{Name}", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/template action", dst: new(PageText), in: "{{.Site.Name}}", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/open brace", dst: new(PageText), in: "a { b", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/control", dst: new(PageText), in: "a\nb", wantErr: "contains a control character"},
+		{name: "pagetext/too long", dst: new(PageText), in: strings.Repeat("a", maxPlainTextLen+1), wantErr: "is too long"},
 
 		{name: "listenaddr/empty", dst: new(ListenAddr), in: "", want: ListenAddr("")},
 		{name: "listenaddr/port only", dst: new(ListenAddr), in: ":8080", want: ListenAddr(":8080")},

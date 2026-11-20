@@ -300,6 +300,13 @@ func validateValue(v *configValidator, key string, val reflect.Value) {
 		return
 	}
 
+	// An empty PageText in Go is a key left out: the built-in text, as
+	// [types.WebTextConfig.WithDefaults] fills it. A loaded one is never
+	// empty, as the loader refuses a blank value.
+	if t, ok := reflect.TypeAssert[types.PageText](val); ok && t == "" {
+		return
+	}
+
 	var (
 		text []byte
 		err  error

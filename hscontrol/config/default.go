@@ -77,7 +77,7 @@ func Default() types.Config {
 			PKCE:                       types.PKCEConfig{Method: types.PKCEMethodS256},
 		},
 		Taildrop: types.TaildropConfig{Enabled: true},
-		Web:      types.WebConfig{Theme: types.DefaultWebTheme()},
+		Web:      types.WebConfig{Theme: types.DefaultWebTheme(), Text: types.DefaultWebText()},
 		CLI:      types.CLIConfig{Timeout: 5 * time.Second},
 		Tuning: types.Tuning{
 			BatchChangeDelay:               800 * time.Millisecond,

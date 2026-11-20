@@ -39,11 +39,8 @@ func renderedPages(t *testing.T) []renderedPage {
 		{
 			name: "Auth Success",
 			html: render(r.AuthSuccess(templates.AuthSuccessResult{
-				Title:   "Node Registered",
-				Heading: "Node registered",
-				Verb:    "Registered",
-				User:    "test@example.com",
-				Message: "You can now close this window.",
+				User: "test@example.com",
+				Kind: templates.AuthSuccessRegister,
 			})),
 			externalURLs: []string{
 				"https://headscale.net/stable/",
@@ -52,26 +49,20 @@ func renderedPages(t *testing.T) []renderedPage {
 		},
 		{
 			name: "Auth Error",
-			html: render(r.AuthError(templates.AuthErrorResult{
-				Title:   "Error",
-				Heading: "Forbidden",
-				Message: "You are not authorized. Please contact your administrator.",
-			})),
+			html: render(r.AuthError(templates.AuthErrorResult{Code: 403})),
 		},
 		{
 			name: "Auth Web Register",
 			html: render(r.AuthWeb(templates.AuthWebData{
-				Title:       "Machine registration",
-				Description: "Run the command below in the headscale server to add this machine to your network:",
-				Command:     "headscale auth register --auth-id test-key-123 --user USERNAME",
+				Command: "headscale auth register --auth-id test-key-123 --user USERNAME",
+				Kind:    templates.AuthWebRegister,
 			})),
 		},
 		{
 			name: "Auth Web Approve",
 			html: render(r.AuthWeb(templates.AuthWebData{
-				Title:       "Authentication check",
-				Description: "Run the command below in the headscale server to approve this authentication request:",
-				Command:     "headscale auth approve --auth-id test-key-123",
+				Command: "headscale auth approve --auth-id test-key-123",
+				Kind:    templates.AuthWebAuth,
 			})),
 		},
 		{

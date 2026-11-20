@@ -115,6 +115,7 @@ type pageSet map[string]*template.Template
 // the built-in templates and theme.
 type Renderer struct {
 	site         *Site
+	text         types.WebTextConfig
 	templatesDir string
 	staticDir    string
 	pages        atomic.Pointer[pageSet]
@@ -148,7 +149,12 @@ func New(cfg *types.Config) (*Renderer, error) {
 		return nil, err
 	}
 
-	r := &Renderer{site: site}
+	text, err := newText(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	r := &Renderer{site: site, text: text}
 
 	if dir := cfg.Web.StaticDir; dir != "" {
 		r.staticDir = cfg.AbsPath(dir)
@@ -174,6 +180,11 @@ func New(cfg *types.Config) (*Renderer, error) {
 // CheckTemplates reports whether the templates of cfg.Web load and render.
 func CheckTemplates(cfg *types.Config) error {
 	site, err := newSite(cfg)
+	if err != nil {
+		return err
+	}
+
+	_, err = newText(cfg)
 	if err != nil {
 		return err
 	}
@@ -465,6 +476,25 @@ func newSite(cfg *types.Config) (*Site, error) {
 	}, nil
 }
 
+// newText is the page text of cfg, with the built-in text where a key is
+// empty. The loader has validated it; text set from Go is checked again.
+func newText(cfg *types.Config) (types.WebTextConfig, error) {
+	text := cfg.Web.Text.WithDefaults()
+
+	for _, f := range types.ConfigFields(&types.Config{Web: types.WebConfig{Text: text}}) {
+		if !strings.HasPrefix(f.Path, "web.text.") {
+			continue
+		}
+
+		err := new(types.PageText).UnmarshalText([]byte(f.Value.String()))
+		if err != nil {
+			return types.WebTextConfig{}, fmt.Errorf("%s %q: %w", f.Path, f.Value.String(), err)
+		}
+	}
+
+	return text, nil
+}
+
 // srcsetEscaper percent-encodes the characters that split a srcset
 // attribute into candidates, so a URL with them stays one URL; a server
 // reads the encoded URL the same.
@@ -631,18 +661,77 @@ func (r *Renderer) Windows() ([]byte, error) { return r.render(pageWindows, nil)
 func (r *Renderer) Blank() ([]byte, error) { return r.render(pageBlank, nil) }
 
 // AuthWeb renders the page that names the command approving a
-// registration or an auth request.
-func (r *Renderer) AuthWeb(d AuthWebData) ([]byte, error) { return r.render(pageAuthWeb, d) }
+// registration or an auth request. Its title and description are the
+// web.text of d.Kind.
+func (r *Renderer) AuthWeb(d AuthWebData) ([]byte, error) {
+	r = r.orDefault()
 
-// AuthSuccess renders the page after a confirmed login.
+	t := r.text.AuthWeb.Register
+	if d.Kind == AuthWebAuth {
+		t = r.text.AuthWeb.Auth
+	}
+
+	d.Title, d.Description = r.expand(t.Title), r.expand(t.Description)
+
+	return r.render(pageAuthWeb, d)
+}
+
+// AuthSuccess renders the page after a confirmed login. Its text is the
+// web.text of d.Kind.
 func (r *Renderer) AuthSuccess(d AuthSuccessResult) ([]byte, error) {
+	r = r.orDefault()
+
+	var t types.WebSuccessText
+
+	switch d.Kind {
+	case AuthSuccessReauth:
+		t = r.text.AuthSuccess.Reauth
+	case AuthSuccessSSH:
+		t = r.text.AuthSuccess.SSH
+	default:
+		t = r.text.AuthSuccess.Register
+	}
+
+	d.Title, d.Heading, d.Verb, d.Message = r.expand(t.Title), r.expand(t.Heading), r.expand(t.Verb), r.expand(t.Message)
+
 	return r.render(pageAuthSuccess, d)
 }
 
-// AuthError renders the page of a failed browser step.
+// AuthError renders the page of a failed browser step. Its text is the
+// web.text of d.Reason; an empty reason is derived from d.Code.
 func (r *Renderer) AuthError(d AuthErrorResult) ([]byte, error) {
+	r = r.orDefault()
+
+	if d.Reason == "" {
+		d.Reason = AuthErrorReason(d.Code)
+	}
+
+	e := r.text.AuthError
+
+	var t types.WebErrorText
+
+	switch d.Reason {
+	case AuthErrorUnauthorized:
+		t = e.Unauthorized
+	case AuthErrorExpired:
+		t = e.Expired
+	case AuthErrorBadRequest:
+		t = e.BadRequest
+	case AuthErrorLinkSpent:
+		t = e.LinkSpent
+	case AuthErrorNodeReportTooLarge:
+		t = e.NodeReportTooLarge
+	default:
+		t = e.ServerError
+	}
+
+	d.Title, d.Heading, d.Message = r.expand(e.Title), r.expand(t.Heading), r.expand(t.Message)
+
 	return r.render(pageAuthError, d)
 }
+
+// expand is t with {name} replaced by the site name.
+func (r *Renderer) expand(t types.PageText) string { return t.Expand(r.site.Name) }
 
 // RegisterConfirm renders the page that asks the user to confirm that a
 // registering device is theirs.

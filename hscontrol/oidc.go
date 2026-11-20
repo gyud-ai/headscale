@@ -707,7 +707,7 @@ const registerConfirmCSRFCookie = "headscale_register_confirm"
 // registrationLinkSpentMsg is logged when a user returns to a
 // registration link whose session is gone, which is usually a reload or a
 // back button after they already confirmed. The page the user sees has
-// the message of [templates.AuthErrorLinkSpent].
+// the web.text of [templates.AuthErrorLinkSpent].
 const registrationLinkSpentMsg = "registration link already used or expired"
 
 var errRegistrationLinkSpent = newHTTPUserError(
@@ -1141,21 +1141,14 @@ func (a *AuthProviderOIDC) renderRegistrationSuccess(
 	reauth bool,
 ) ([]byte, error) {
 	result := templates.AuthSuccessResult{
-		Title:   "Node Reauthenticated",
-		Heading: "Node reauthenticated",
-		Verb:    "Reauthenticated",
-		User:    user.Display(),
-		Message: "You can now close this window.",
-		Kind:    templates.AuthSuccessReauth,
+		User: user.Display(),
+		Kind: templates.AuthSuccessReauth,
 	}
 	if node.IsTagged() {
 		result.User = strings.Join(node.Tags().AsSlice(), ", ")
 	}
 
 	if !reauth {
-		result.Title = "Node Registered"
-		result.Heading = "Node registered"
-		result.Verb = "Registered"
 		result.Kind = templates.AuthSuccessRegister
 	}
 
@@ -1163,16 +1156,10 @@ func (a *AuthProviderOIDC) renderRegistrationSuccess(
 }
 
 func (a *AuthProviderOIDC) renderAuthSuccess(user *types.User) ([]byte, error) {
-	result := templates.AuthSuccessResult{
-		Title:   "SSH Session Authorized",
-		Heading: "SSH session authorized",
-		Verb:    "Authorized",
-		User:    user.Display(),
-		Message: "You may return to your terminal.",
-		Kind:    templates.AuthSuccessSSH,
-	}
-
-	return a.pages().AuthSuccess(result)
+	return a.pages().AuthSuccess(templates.AuthSuccessResult{
+		User: user.Display(),
+		Kind: templates.AuthSuccessSSH,
+	})
 }
 
 // getCookieName generates a unique cookie name based on a cookie value. It

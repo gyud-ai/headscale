@@ -529,7 +529,8 @@ web:
         verb: Authorized
         # The sentence after the user name.
         message: You may return to your terminal.
-    # The page shown when a browser step of a login fails.
+    # The error page a browser gets: a login step that failed, or a page that
+    # does not exist.
     auth_error:
       # The page title of every error.
       title: Error
@@ -553,6 +554,12 @@ web:
         heading: Request not accepted
         # Tells the user what to do next.
         message: The request could not be processed. Please try again.
+      # A 404: a browser asked for a page that does not exist.
+      not_found:
+        # The bold text in the error box.
+        heading: Page not found
+        # Tells the user what to do next.
+        message: There is no page at this address. Check the link and try again.
       # A 5xx: headscale failed or is busy.
       server_error:
         # The bold text in the error box.

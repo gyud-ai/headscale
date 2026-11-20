@@ -1302,6 +1302,24 @@ in
             example = "Contact the IT team at it@example.com.";
           };
         };
+        not_found = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Page not found";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "There is no page at this address. Check the link and try again.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
         server_error = {
           heading = lib.mkOption {
             type = lib.types.str;

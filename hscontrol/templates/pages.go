@@ -43,7 +43,8 @@ const (
 
 // AuthErrorResult contains the text content for an error page shown
 // to users in their browser when a browser-facing operation fails
-// (OIDC callback, SSH check, registration confirmation, etc.).
+// (OIDC callback, SSH check, registration confirmation, etc.), or when
+// a browser asks for a page that does not exist.
 type AuthErrorResult struct {
 	// Title is the browser tab / page title, before the site name,
 	// e.g. "Error": web.text.auth_error.title.
@@ -78,6 +79,9 @@ const (
 	// AuthErrorBadRequest is another 4xx: the request could not be used.
 	AuthErrorBadRequest = "bad_request"
 
+	// AuthErrorNotFound is a 404: there is no page at the address.
+	AuthErrorNotFound = "not_found"
+
 	// AuthErrorServerError is a 5xx: headscale failed.
 	AuthErrorServerError = "server_error"
 
@@ -97,6 +101,8 @@ func AuthErrorReason(code int) string {
 		return AuthErrorUnauthorized
 	case code == http.StatusGone:
 		return AuthErrorExpired
+	case code == http.StatusNotFound:
+		return AuthErrorNotFound
 	case code >= 400 && code < 500:
 		return AuthErrorBadRequest
 	default:

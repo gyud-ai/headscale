@@ -900,7 +900,8 @@ type WebTextConfig struct {
 	// AuthSuccess is the page shown after an OpenID Connect login.
 	AuthSuccess WebAuthSuccessText `koanf:"auth_success"`
 
-	// AuthError is the page shown when a browser step of a login fails.
+	// AuthError is the error page a browser gets: a login step that failed,
+	// or a page that does not exist.
 	AuthError WebAuthErrorText `koanf:"auth_error"`
 }
 
@@ -967,6 +968,9 @@ type WebAuthErrorText struct {
 	// BadRequest is another 4xx: the request could not be used, for example
 	// a login link that was cut short.
 	BadRequest WebErrorText `koanf:"bad_request"`
+
+	// NotFound is a 404: a browser asked for a page that does not exist.
+	NotFound WebErrorText `koanf:"not_found"`
 
 	// ServerError is a 5xx: headscale failed or is busy.
 	ServerError WebErrorText `koanf:"server_error"`
@@ -1098,6 +1102,10 @@ func DefaultWebText() WebTextConfig {
 			BadRequest: WebErrorText{
 				Heading: "Request not accepted",
 				Message: "The request could not be processed. Please try again.",
+			},
+			NotFound: WebErrorText{
+				Heading: "Page not found",
+				Message: "There is no page at this address. Check the link and try again.",
 			},
 			ServerError: WebErrorText{
 				Heading: "Something went wrong",

@@ -3187,6 +3187,9 @@ The look of the pages headscale serves to browsers: the client setup pages, the 
           bad_request:
             heading: Request not accepted
             message: The request could not be processed. Please try again.
+          not_found:
+            heading: Page not found
+            message: There is no page at this address. Check the link and try again.
           server_error:
             heading: Something went wrong
             message: Something went wrong. Please try again later.
@@ -3633,6 +3636,9 @@ The text headscale picks for a page, such as the heading of an error page, set w
           bad_request:
             heading: Request not accepted
             message: The request could not be processed. Please try again.
+          not_found:
+            heading: Page not found
+            message: There is no page at this address. Check the link and try again.
           server_error:
             heading: Something went wrong
             message: Something went wrong. Please try again later.
@@ -4252,7 +4258,7 @@ The sentence after the user name.
 
 #### `web.text.auth_error` { #web.text.auth_error data-toc-label="auth_error" }
 
-The page shown when a browser step of a login fails.
+The error page a browser gets: a login step that failed, or a page that does not exist.
 
 ??? example "All `web.text.auth_error` keys and defaults"
 
@@ -4270,6 +4276,9 @@ The page shown when a browser step of a login fails.
           bad_request:
             heading: Request not accepted
             message: The request could not be processed. Please try again.
+          not_found:
+            heading: Page not found
+            message: There is no page at this address. Check the link and try again.
           server_error:
             heading: Something went wrong
             message: Something went wrong. Please try again later.
@@ -4533,6 +4542,81 @@ Tells the user what to do next.
 
     ```nix
     services.headscale.settings.web.text.auth_error.bad_request.message = "Contact the IT team at it@example.com.";
+    ```
+
+##### `web.text.auth_error.not_found` { #web.text.auth_error.not_found data-toc-label="not_found" }
+
+A 404: a browser asked for a page that does not exist.
+
+??? example "All `web.text.auth_error.not_found` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          not_found:
+            heading: Page not found
+            message: There is no page at this address. Check the link and try again.
+    ```
+
+###### `web.text.auth_error.not_found.heading` { #web.text.auth_error.not_found.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Page not found`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_NOT_FOUND_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          not_found:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_NOT_FOUND_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.not_found.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.not_found.message` { #web.text.auth_error.not_found.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `There is no page at this address. Check the link and try again.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_NOT_FOUND_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          not_found:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_NOT_FOUND_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.not_found.message = "Contact the IT team at it@example.com.";
     ```
 
 ##### `web.text.auth_error.server_error` { #web.text.auth_error.server_error data-toc-label="server_error" }

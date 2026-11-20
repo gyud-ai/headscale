@@ -378,6 +378,72 @@ func isBidiControl(r rune) bool {
 	return r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069'
 }
 
+// PageText is a line of text for a page, as [PlainText] but never blank:
+// a key left out keeps the built-in text. "{name}" in it stands for
+// web.theme.name; any other "{" is refused, so a misspelt placeholder
+// fails at load instead of showing on a page.
+type PageText string
+
+// PageTextPlaceholders are the placeholders a [PageText] may hold.
+var PageTextPlaceholders = []string{"{name}"}
+
+func (t *PageText) UnmarshalText(text []byte) error {
+	s := string(text)
+	if strings.TrimSpace(s) == "" {
+		return &ConfigError{
+			Reason: "is blank",
+			Hint:   "remove the key to keep the built-in text, or write the text to show",
+		}
+	}
+
+	err := checkPlainText(s)
+	if err != nil {
+		return err
+	}
+
+	for i := strings.IndexByte(s, '{'); i >= 0; i = strings.IndexByte(s, '{') {
+		ph, _, closed := strings.Cut(s[i:], "}")
+		if !closed || !slices.Contains(PageTextPlaceholders, ph+"}") {
+			if closed {
+				ph += "}"
+			}
+
+			return &ConfigError{
+				Reason:  "has an unknown placeholder",
+				Detail:  clipForError(ph),
+				Allowed: PageTextPlaceholders,
+				Hint:    `"{" starts a placeholder; use one of the allowed ones, or remove the "{"`,
+			}
+		}
+
+		s = s[i+len(ph)+1:]
+	}
+
+	*t = PageText(text)
+
+	return nil
+}
+
+// Expand returns t with its placeholders replaced: {name} by name.
+func (t PageText) Expand(name string) string {
+	return strings.ReplaceAll(string(t), "{name}", name)
+}
+
+// clipForError shortens s to at most 40 bytes for an error message.
+func clipForError(s string) string {
+	const limit = 40
+	if len(s) <= limit {
+		return s
+	}
+
+	cut := limit
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+
+	return s[:cut] + "..."
+}
+
 // ListenAddr is "" or a TCP host:port address; the port may be "http" or
 // "https".
 type ListenAddr string

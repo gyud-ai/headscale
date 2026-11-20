@@ -17,6 +17,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestDefaultWebText: every built-in text is set and passes the checks a
+// configured one gets, and WithDefaults fills only what is empty.
+func TestDefaultWebText(t *testing.T) {
+	cfg := Config{Web: WebConfig{Text: DefaultWebText()}}
+
+	n := 0
+
+	for _, f := range ConfigFields(&cfg) {
+		if !strings.HasPrefix(f.Path, "web.text.") {
+			continue
+		}
+
+		n++
+
+		require.Equal(t, reflect.TypeFor[PageText](), f.Value.Type(), f.Path)
+		require.NoError(t, new(PageText).UnmarshalText([]byte(f.Value.String())), f.Path)
+	}
+
+	assert.Equal(t, 29, n, "web.text keys")
+
+	assert.Equal(t, DefaultWebText(), WebTextConfig{}.WithDefaults())
+
+	var set WebTextConfig
+
+	set.AuthError.Expired.Heading = "Too slow"
+
+	got := set.WithDefaults()
+	assert.Equal(t, PageText("Too slow"), got.AuthError.Expired.Heading)
+	assert.Equal(t, DefaultWebText().AuthError.Expired.Message, got.AuthError.Expired.Message)
+}
+
+func TestPageTextExpand(t *testing.T) {
+	assert.Equal(t, "Welcome to Example VPN, Example VPN", PageText("Welcome to {name}, {name}").Expand("Example VPN"))
+	assert.Equal(t, "no placeholder", PageText("no placeholder").Expand("x"))
+	assert.Equal(t, "{name}", PageText("{name}").Expand("{name}"), "a name is not expanded again")
+}
+
 func TestConfigValues(t *testing.T) {
 	tests := []struct {
 		name string
@@ -104,6 +141,19 @@ func TestConfigValues(t *testing.T) {
 		{name: "plaintext/bidi override", dst: new(PlainText), in: "abc\u202edcba", wantErr: "reorders text"},
 		{name: "plaintext/bidi isolate", dst: new(PlainText), in: "abc\u2067x", wantErr: "reorders text"},
 		{name: "plaintext/invalid utf-8", dst: new(PlainText), in: "a\xffb", wantErr: "is not valid UTF-8"},
+
+		{name: "pagetext/text", dst: new(PageText), in: "Welcome to {name}!", want: PageText("Welcome to {name}!")},
+		{name: "pagetext/two placeholders", dst: new(PageText), in: "{name} by {name}", want: PageText("{name} by {name}")},
+		{name: "pagetext/closing brace alone", dst: new(PageText), in: "a } b", want: PageText("a } b")},
+		{name: "pagetext/markup", dst: new(PageText), in: "<b>bold</b>", want: PageText("<b>bold</b>")},
+		{name: "pagetext/empty", dst: new(PageText), in: "", wantErr: "is blank"},
+		{name: "pagetext/blank", dst: new(PageText), in: "  \u00a0 ", wantErr: "is blank"},
+		{name: "pagetext/unknown placeholder", dst: new(PageText), in: "Hello {user}", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/misspelt placeholder", dst: new(PageText), in: "{Name}", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/template action", dst: new(PageText), in: "{{.Site.Name}}", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/open brace", dst: new(PageText), in: "a { b", wantErr: "has an unknown placeholder"},
+		{name: "pagetext/control", dst: new(PageText), in: "a\nb", wantErr: "contains a control character"},
+		{name: "pagetext/too long", dst: new(PageText), in: strings.Repeat("a", maxPlainTextLen+1), wantErr: "is too long"},
 
 		{name: "listenaddr/empty", dst: new(ListenAddr), in: "", want: ListenAddr("")},
 		{name: "listenaddr/port only", dst: new(ListenAddr), in: ":8080", want: ListenAddr(":8080")},

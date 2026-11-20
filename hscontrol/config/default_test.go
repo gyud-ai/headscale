@@ -133,6 +133,15 @@ func TestValidateGoData(t *testing.T) {
 			wantErr: "web.theme.logo_dark is set without web.theme.logo",
 		},
 		{
+			name: "web text left out",
+			set:  func(c *types.Config) { c.Web.Text = types.WebTextConfig{} },
+		},
+		{
+			name:    "web text placeholder",
+			set:     func(c *types.Config) { c.Web.Text.AuthError.Title = "Error at {host}" },
+			wantErr: "web.text.auth_error.title has an unknown placeholder",
+		},
+		{
 			name: "dark logo",
 			set: func(c *types.Config) {
 				c.Web.Theme.Logo, c.Web.Theme.LogoDark = "/static/logo.svg", "/static/logo-dark.svg"

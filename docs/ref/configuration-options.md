@@ -3152,6 +3152,50 @@ The look of the pages headscale serves to browsers: the client setup pages, the 
         stylesheets: []
         footer_text: ""
         hide_powered_by: false
+      text:
+        auth_web:
+          register:
+            title: Node registration
+            description: 'Run the command below in the headscale server to add this node to your network:'
+          auth:
+            title: Authentication check
+            description: 'Run the command below in the headscale server to approve this authentication request:'
+        auth_success:
+          register:
+            title: Node Registered
+            heading: Node registered
+            verb: Registered
+            message: You can now close this window.
+          reauth:
+            title: Node Reauthenticated
+            heading: Node reauthenticated
+            verb: Reauthenticated
+            message: You can now close this window.
+          ssh:
+            title: SSH Session Authorized
+            heading: SSH session authorized
+            verb: Authorized
+            message: You may return to your terminal.
+        auth_error:
+          title: Error
+          unauthorized:
+            heading: Access denied
+            message: You are not authorized. Please contact your administrator.
+          expired:
+            heading: Session expired
+            message: Your session has expired. Please try again.
+          bad_request:
+            heading: Request not accepted
+            message: The request could not be processed. Please try again.
+          server_error:
+            heading: Something went wrong
+            message: Something went wrong. Please try again later.
+          link_spent:
+            heading: Link already used
+            message: This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.
+          node_report_too_large:
+            heading: Device report too large
+            message: This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.
     ```
 
 ### `web.templates_dir` { #web.templates_dir data-toc-label="templates_dir" }
@@ -3544,6 +3588,1176 @@ Removes the "Powered by Headscale" link from the footer.
 
     ```nix
     services.headscale.settings.web.theme.hide_powered_by = true;
+    ```
+
+### `web.text` { #web.text data-toc-label="text" }
+
+The text headscale picks for a page, such as the heading of an error page, set without writing templates. Each value is one line of plain text, shown as written; `{name}` in it is replaced by [`web.theme.name`](#web.theme.name). A blank value, control characters, more than 500 characters and any other `{...}` are refused. Leave a key out to keep the built-in text.
+
+??? example "All `web.text` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          register:
+            title: Node registration
+            description: 'Run the command below in the headscale server to add this node to your network:'
+          auth:
+            title: Authentication check
+            description: 'Run the command below in the headscale server to approve this authentication request:'
+        auth_success:
+          register:
+            title: Node Registered
+            heading: Node registered
+            verb: Registered
+            message: You can now close this window.
+          reauth:
+            title: Node Reauthenticated
+            heading: Node reauthenticated
+            verb: Reauthenticated
+            message: You can now close this window.
+          ssh:
+            title: SSH Session Authorized
+            heading: SSH session authorized
+            verb: Authorized
+            message: You may return to your terminal.
+        auth_error:
+          title: Error
+          unauthorized:
+            heading: Access denied
+            message: You are not authorized. Please contact your administrator.
+          expired:
+            heading: Session expired
+            message: Your session has expired. Please try again.
+          bad_request:
+            heading: Request not accepted
+            message: The request could not be processed. Please try again.
+          server_error:
+            heading: Something went wrong
+            message: Something went wrong. Please try again later.
+          link_spent:
+            heading: Link already used
+            message: This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.
+          node_report_too_large:
+            heading: Device report too large
+            message: This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.
+    ```
+
+#### `web.text.auth_web` { #web.text.auth_web data-toc-label="auth_web" }
+
+The page that shows an administrator the command that approves a request, when OpenID Connect is off.
+
+??? example "All `web.text.auth_web` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          register:
+            title: Node registration
+            description: 'Run the command below in the headscale server to add this node to your network:'
+          auth:
+            title: Authentication check
+            description: 'Run the command below in the headscale server to approve this authentication request:'
+    ```
+
+##### `web.text.auth_web.register` { #web.text.auth_web.register data-toc-label="register" }
+
+`/register/{id}`: a new node waiting to be added.
+
+??? example "All `web.text.auth_web.register` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          register:
+            title: Node registration
+            description: 'Run the command below in the headscale server to add this node to your network:'
+    ```
+
+###### `web.text.auth_web.register.title` { #web.text.auth_web.register.title data-toc-label="title" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Node registration`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_WEB_REGISTER_TITLE`
+
+The page title and heading.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          register:
+            title: Add a device to {name}
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_WEB_REGISTER_TITLE='Add a device to {name}'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_web.register.title = "Add a device to {name}";
+    ```
+
+###### `web.text.auth_web.register.description` { #web.text.auth_web.register.description data-toc-label="description" }
+
+- **Type:** [string](#type-string)
+- **Default:** `'Run the command below in the headscale server to add this node to your network:'`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_WEB_REGISTER_DESCRIPTION`
+
+Introduces the command.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          register:
+            description: 'Send this command to the IT team:'
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_WEB_REGISTER_DESCRIPTION='Send this command to the IT team:'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_web.register.description = "Send this command to the IT team:";
+    ```
+
+##### `web.text.auth_web.auth` { #web.text.auth_web.auth data-toc-label="auth" }
+
+`/auth/{id}`: an auth request waiting for approval.
+
+??? example "All `web.text.auth_web.auth` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          auth:
+            title: Authentication check
+            description: 'Run the command below in the headscale server to approve this authentication request:'
+    ```
+
+###### `web.text.auth_web.auth.title` { #web.text.auth_web.auth.title data-toc-label="title" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Authentication check`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_WEB_AUTH_TITLE`
+
+The page title and heading.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          auth:
+            title: Add a device to {name}
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_WEB_AUTH_TITLE='Add a device to {name}'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_web.auth.title = "Add a device to {name}";
+    ```
+
+###### `web.text.auth_web.auth.description` { #web.text.auth_web.auth.description data-toc-label="description" }
+
+- **Type:** [string](#type-string)
+- **Default:** `'Run the command below in the headscale server to approve this authentication request:'`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_WEB_AUTH_DESCRIPTION`
+
+Introduces the command.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_web:
+          auth:
+            description: 'Send this command to the IT team:'
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_WEB_AUTH_DESCRIPTION='Send this command to the IT team:'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_web.auth.description = "Send this command to the IT team:";
+    ```
+
+#### `web.text.auth_success` { #web.text.auth_success data-toc-label="auth_success" }
+
+The page shown after an OpenID Connect login.
+
+??? example "All `web.text.auth_success` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          register:
+            title: Node Registered
+            heading: Node registered
+            verb: Registered
+            message: You can now close this window.
+          reauth:
+            title: Node Reauthenticated
+            heading: Node reauthenticated
+            verb: Reauthenticated
+            message: You can now close this window.
+          ssh:
+            title: SSH Session Authorized
+            heading: SSH session authorized
+            verb: Authorized
+            message: You may return to your terminal.
+    ```
+
+##### `web.text.auth_success.register` { #web.text.auth_success.register data-toc-label="register" }
+
+A new node registered.
+
+??? example "All `web.text.auth_success.register` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          register:
+            title: Node Registered
+            heading: Node registered
+            verb: Registered
+            message: You can now close this window.
+    ```
+
+###### `web.text.auth_success.register.title` { #web.text.auth_success.register.title data-toc-label="title" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Node Registered`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_TITLE`
+
+The page title.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          register:
+            title: Welcome
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_TITLE=Welcome
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.register.title = "Welcome";
+    ```
+
+###### `web.text.auth_success.register.heading` { #web.text.auth_success.register.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Node registered`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_HEADING`
+
+The text in the success box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          register:
+            heading: You are connected to {name}
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_HEADING='You are connected to {name}'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.register.heading = "You are connected to {name}";
+    ```
+
+###### `web.text.auth_success.register.verb` { #web.text.auth_success.register.verb data-toc-label="verb" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Registered`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_VERB`
+
+The word before "as" and the user name.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          register:
+            verb: Signed in
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_VERB='Signed in'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.register.verb = "Signed in";
+    ```
+
+###### `web.text.auth_success.register.message` { #web.text.auth_success.register.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `You can now close this window.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_MESSAGE`
+
+The sentence after the user name.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          register:
+            message: You can close this tab.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REGISTER_MESSAGE='You can close this tab.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.register.message = "You can close this tab.";
+    ```
+
+##### `web.text.auth_success.reauth` { #web.text.auth_success.reauth data-toc-label="reauth" }
+
+An existing node logged in again.
+
+??? example "All `web.text.auth_success.reauth` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          reauth:
+            title: Node Reauthenticated
+            heading: Node reauthenticated
+            verb: Reauthenticated
+            message: You can now close this window.
+    ```
+
+###### `web.text.auth_success.reauth.title` { #web.text.auth_success.reauth.title data-toc-label="title" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Node Reauthenticated`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_TITLE`
+
+The page title.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          reauth:
+            title: Welcome
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_TITLE=Welcome
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.reauth.title = "Welcome";
+    ```
+
+###### `web.text.auth_success.reauth.heading` { #web.text.auth_success.reauth.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Node reauthenticated`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_HEADING`
+
+The text in the success box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          reauth:
+            heading: You are connected to {name}
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_HEADING='You are connected to {name}'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.reauth.heading = "You are connected to {name}";
+    ```
+
+###### `web.text.auth_success.reauth.verb` { #web.text.auth_success.reauth.verb data-toc-label="verb" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Reauthenticated`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_VERB`
+
+The word before "as" and the user name.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          reauth:
+            verb: Signed in
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_VERB='Signed in'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.reauth.verb = "Signed in";
+    ```
+
+###### `web.text.auth_success.reauth.message` { #web.text.auth_success.reauth.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `You can now close this window.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_MESSAGE`
+
+The sentence after the user name.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          reauth:
+            message: You can close this tab.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_REAUTH_MESSAGE='You can close this tab.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.reauth.message = "You can close this tab.";
+    ```
+
+##### `web.text.auth_success.ssh` { #web.text.auth_success.ssh data-toc-label="ssh" }
+
+An SSH session that a check rule held, now approved.
+
+??? example "All `web.text.auth_success.ssh` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          ssh:
+            title: SSH Session Authorized
+            heading: SSH session authorized
+            verb: Authorized
+            message: You may return to your terminal.
+    ```
+
+###### `web.text.auth_success.ssh.title` { #web.text.auth_success.ssh.title data-toc-label="title" }
+
+- **Type:** [string](#type-string)
+- **Default:** `SSH Session Authorized`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_TITLE`
+
+The page title.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          ssh:
+            title: Welcome
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_TITLE=Welcome
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.ssh.title = "Welcome";
+    ```
+
+###### `web.text.auth_success.ssh.heading` { #web.text.auth_success.ssh.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `SSH session authorized`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_HEADING`
+
+The text in the success box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          ssh:
+            heading: You are connected to {name}
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_HEADING='You are connected to {name}'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.ssh.heading = "You are connected to {name}";
+    ```
+
+###### `web.text.auth_success.ssh.verb` { #web.text.auth_success.ssh.verb data-toc-label="verb" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Authorized`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_VERB`
+
+The word before "as" and the user name.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          ssh:
+            verb: Signed in
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_VERB='Signed in'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.ssh.verb = "Signed in";
+    ```
+
+###### `web.text.auth_success.ssh.message` { #web.text.auth_success.ssh.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `You may return to your terminal.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_MESSAGE`
+
+The sentence after the user name.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_success:
+          ssh:
+            message: You can close this tab.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_MESSAGE='You can close this tab.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_success.ssh.message = "You can close this tab.";
+    ```
+
+#### `web.text.auth_error` { #web.text.auth_error data-toc-label="auth_error" }
+
+The page shown when a browser step of a login fails.
+
+??? example "All `web.text.auth_error` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          title: Error
+          unauthorized:
+            heading: Access denied
+            message: You are not authorized. Please contact your administrator.
+          expired:
+            heading: Session expired
+            message: Your session has expired. Please try again.
+          bad_request:
+            heading: Request not accepted
+            message: The request could not be processed. Please try again.
+          server_error:
+            heading: Something went wrong
+            message: Something went wrong. Please try again later.
+          link_spent:
+            heading: Link already used
+            message: This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.
+          node_report_too_large:
+            heading: Device report too large
+            message: This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.
+    ```
+
+##### `web.text.auth_error.title` { #web.text.auth_error.title data-toc-label="title" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Error`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_TITLE`
+
+The page title of every error.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          title: Sign-in problem
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_TITLE='Sign-in problem'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.title = "Sign-in problem";
+    ```
+
+##### `web.text.auth_error.unauthorized` { #web.text.auth_error.unauthorized data-toc-label="unauthorized" }
+
+A 401 or 403: the user may not do this, for example a login outside [`oidc.allowed_domains`](#oidc.allowed_domains).
+
+??? example "All `web.text.auth_error.unauthorized` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          unauthorized:
+            heading: Access denied
+            message: You are not authorized. Please contact your administrator.
+    ```
+
+###### `web.text.auth_error.unauthorized.heading` { #web.text.auth_error.unauthorized.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Access denied`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_UNAUTHORIZED_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          unauthorized:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_UNAUTHORIZED_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.unauthorized.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.unauthorized.message` { #web.text.auth_error.unauthorized.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `You are not authorized. Please contact your administrator.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_UNAUTHORIZED_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          unauthorized:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_UNAUTHORIZED_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.unauthorized.message = "Contact the IT team at it@example.com.";
+    ```
+
+##### `web.text.auth_error.expired` { #web.text.auth_error.expired data-toc-label="expired" }
+
+A 410: the login took too long and its session expired.
+
+??? example "All `web.text.auth_error.expired` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          expired:
+            heading: Session expired
+            message: Your session has expired. Please try again.
+    ```
+
+###### `web.text.auth_error.expired.heading` { #web.text.auth_error.expired.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Session expired`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_EXPIRED_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          expired:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_EXPIRED_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.expired.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.expired.message` { #web.text.auth_error.expired.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Your session has expired. Please try again.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_EXPIRED_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          expired:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_EXPIRED_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.expired.message = "Contact the IT team at it@example.com.";
+    ```
+
+##### `web.text.auth_error.bad_request` { #web.text.auth_error.bad_request data-toc-label="bad_request" }
+
+Another 4xx: the request could not be used, for example a login link that was cut short.
+
+??? example "All `web.text.auth_error.bad_request` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          bad_request:
+            heading: Request not accepted
+            message: The request could not be processed. Please try again.
+    ```
+
+###### `web.text.auth_error.bad_request.heading` { #web.text.auth_error.bad_request.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Request not accepted`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_BAD_REQUEST_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          bad_request:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_BAD_REQUEST_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.bad_request.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.bad_request.message` { #web.text.auth_error.bad_request.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `The request could not be processed. Please try again.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_BAD_REQUEST_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          bad_request:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_BAD_REQUEST_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.bad_request.message = "Contact the IT team at it@example.com.";
+    ```
+
+##### `web.text.auth_error.server_error` { #web.text.auth_error.server_error data-toc-label="server_error" }
+
+A 5xx: headscale failed or is busy.
+
+??? example "All `web.text.auth_error.server_error` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          server_error:
+            heading: Something went wrong
+            message: Something went wrong. Please try again later.
+    ```
+
+###### `web.text.auth_error.server_error.heading` { #web.text.auth_error.server_error.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Something went wrong`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_SERVER_ERROR_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          server_error:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_SERVER_ERROR_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.server_error.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.server_error.message` { #web.text.auth_error.server_error.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Something went wrong. Please try again later.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_SERVER_ERROR_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          server_error:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_SERVER_ERROR_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.server_error.message = "Contact the IT team at it@example.com.";
+    ```
+
+##### `web.text.auth_error.link_spent` { #web.text.auth_error.link_spent data-toc-label="link_spent" }
+
+A 410 for a registration link that was already used, usually a reload after the user confirmed.
+
+??? example "All `web.text.auth_error.link_spent` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          link_spent:
+            heading: Link already used
+            message: This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.
+    ```
+
+###### `web.text.auth_error.link_spent.heading` { #web.text.auth_error.link_spent.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Link already used`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_LINK_SPENT_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          link_spent:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_LINK_SPENT_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.link_spent.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.link_spent.message` { #web.text.auth_error.link_spent.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_LINK_SPENT_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          link_spent:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_LINK_SPENT_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.link_spent.message = "Contact the IT team at it@example.com.";
+    ```
+
+##### `web.text.auth_error.node_report_too_large` { #web.text.auth_error.node_report_too_large data-toc-label="node_report_too_large" }
+
+A 400 for a device whose report to headscale is over the size limit.
+
+??? example "All `web.text.auth_error.node_report_too_large` keys and defaults"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          node_report_too_large:
+            heading: Device report too large
+            message: This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.
+    ```
+
+###### `web.text.auth_error.node_report_too_large.heading` { #web.text.auth_error.node_report_too_large.heading data-toc-label="heading" }
+
+- **Type:** [string](#type-string)
+- **Default:** `Device report too large`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_NODE_REPORT_TOO_LARGE_HEADING`
+
+The bold text in the error box.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          node_report_too_large:
+            heading: Something is not right
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_NODE_REPORT_TOO_LARGE_HEADING='Something is not right'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.node_report_too_large.heading = "Something is not right";
+    ```
+
+###### `web.text.auth_error.node_report_too_large.message` { #web.text.auth_error.node_report_too_large.message data-toc-label="message" }
+
+- **Type:** [string](#type-string)
+- **Default:** `This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.`
+- **Env:** `HEADSCALE_WEB_TEXT_AUTH_ERROR_NODE_REPORT_TOO_LARGE_MESSAGE`
+
+Tells the user what to do next.
+
+=== "YAML"
+
+    ```yaml
+    web:
+      text:
+        auth_error:
+          node_report_too_large:
+            message: Contact the IT team at it@example.com.
+    ```
+
+=== "Environment"
+
+    ```shell
+    export HEADSCALE_WEB_TEXT_AUTH_ERROR_NODE_REPORT_TOO_LARGE_MESSAGE='Contact the IT team at it@example.com.'
+    ```
+
+=== "NixOS"
+
+    ```nix
+    services.headscale.settings.web.text.auth_error.node_report_too_large.message = "Contact the IT team at it@example.com.";
     ```
 
 ## `cli` { #cli data-toc-label="cli" }

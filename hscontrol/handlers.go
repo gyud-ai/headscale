@@ -62,18 +62,18 @@ func httpError(w http.ResponseWriter, err error) {
 // rendered by pages (nil for the built-in one). Use this for
 // browser-facing error paths (OIDC, registration confirm) where the user
 // should see a branded page instead of plain text. Technical details go
-// to the server log; the HTML page only shows an actionable message
-// derived from the HTTP status code.
+// to the server log; the HTML page only shows an actionable message for
+// the error's reason, or one derived from the HTTP status code.
 func httpUserError(w http.ResponseWriter, pages *templates.Renderer, err error) {
 	code := http.StatusInternalServerError
-	userMsg := ""
+	reason := ""
 
 	if herr, ok := errors.AsType[HTTPError](err); ok {
 		if herr.Code != 0 {
 			code = herr.Code
 		}
 
-		userMsg = herr.UserMsg
+		reason = herr.Reason
 
 		log.Error().Err(errForLog(herr.Err)).Int(zf.Code, code).
 			Msgf("user msg: %s", herr.Msg)
@@ -82,15 +82,16 @@ func httpUserError(w http.ResponseWriter, pages *templates.Renderer, err error) 
 			Msg("http internal server error")
 	}
 
-	if userMsg == "" {
-		userMsg = userMessageForStatusCode(code)
+	if reason == "" {
+		reason = templates.AuthErrorReason(code)
 	}
 
 	writePage(w, code)(pages.AuthError(templates.AuthErrorResult{
 		Title:   "Error",
 		Heading: http.StatusText(code),
-		Message: userMsg,
+		Message: userMessages[reason],
 		Code:    code,
+		Reason:  reason,
 	}))
 }
 
@@ -116,25 +117,24 @@ func writePage(w http.ResponseWriter, status int) func([]byte, error) {
 	}
 }
 
-func userMessageForStatusCode(code int) string {
-	switch {
-	case code == http.StatusUnauthorized || code == http.StatusForbidden:
-		return "You are not authorized. Please contact your administrator."
-	case code == http.StatusGone:
-		return "Your session has expired. Please try again."
-	case code >= 400 && code < 500:
-		return "The request could not be processed. Please try again."
-	default:
-		return "Something went wrong. Please try again later."
-	}
+// userMessages is the message of each error page reason.
+var userMessages = map[string]string{
+	templates.AuthErrorUnauthorized: "You are not authorized. Please contact your administrator.",
+	templates.AuthErrorExpired:      "Your session has expired. Please try again.",
+	templates.AuthErrorBadRequest:   "The request could not be processed. Please try again.",
+	templates.AuthErrorServerError:  "Something went wrong. Please try again later.",
+	templates.AuthErrorLinkSpent: "This link has already been used or has expired. " +
+		"If your device is connected you are done; otherwise start the login again.",
+	templates.AuthErrorNodeReportTooLarge: "This device reports too much data. " +
+		"Ask your administrator to reduce its reported metadata, then sign in again.",
 }
 
 // HTTPError represents an error that is surfaced to the user via web.
 type HTTPError struct {
-	Code    int    // HTTP response code to send to client; 0 means 500
-	Msg     string // Response body to send to non-browser clients
-	Err     error  // Detailed error to log on the server
-	UserMsg string // Optional safe message for browser-facing error pages
+	Code   int    // HTTP response code to send to client; 0 means 500
+	Msg    string // Response body to send to non-browser clients
+	Err    error  // Detailed error to log on the server
+	Reason string // Error page reason, a templates.AuthError value; empty derives it from Code
 }
 
 func (e HTTPError) Error() string { return fmt.Sprintf("http error[%d]: %s, %s", e.Code, e.Msg, e.Err) }
@@ -145,8 +145,10 @@ func NewHTTPError(code int, msg string, err error) HTTPError {
 	return HTTPError{Code: code, Msg: msg, Err: err}
 }
 
-func newHTTPUserError(code int, msg, userMsg string, err error) HTTPError {
-	return HTTPError{Code: code, Msg: msg, Err: err, UserMsg: userMsg}
+// newHTTPUserError is an HTTPError whose error page shows the message of
+// reason, a templates.AuthError value, instead of the one of code.
+func newHTTPUserError(code int, msg, reason string, err error) HTTPError {
+	return HTTPError{Code: code, Msg: msg, Err: err, Reason: reason}
 }
 
 var errMethodNotAllowed = NewHTTPError(http.StatusMethodNotAllowed, "method not allowed", nil)

@@ -729,3 +729,18 @@ func TestFaviconOverride(t *testing.T) {
 	r.ServeFavicon(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/favicon.ico", nil))
 	assert.Equal(t, "custom", rec.Body.String())
 }
+
+func TestAuthErrorReason(t *testing.T) {
+	for code, want := range map[int]string{
+		http.StatusUnauthorized:        AuthErrorUnauthorized,
+		http.StatusForbidden:           AuthErrorUnauthorized,
+		http.StatusGone:                AuthErrorExpired,
+		http.StatusBadRequest:          AuthErrorBadRequest,
+		http.StatusNotFound:            AuthErrorBadRequest,
+		http.StatusInternalServerError: AuthErrorServerError,
+		http.StatusServiceUnavailable:  AuthErrorServerError,
+		0:                              AuthErrorServerError,
+	} {
+		assert.Equal(t, want, AuthErrorReason(code), "%d", code)
+	}
+}

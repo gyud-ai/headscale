@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juanfont/headscale/hscontrol/capver"
+	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -289,7 +290,7 @@ func TestHttpUserError(t *testing.T) {
 			err: newHTTPUserError(
 				http.StatusGone,
 				"registration link already used or expired",
-				"This link has already been used or has expired.",
+				templates.AuthErrorLinkSpent,
 				nil,
 			),
 			wantCode:       http.StatusGone,

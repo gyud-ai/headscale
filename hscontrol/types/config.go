@@ -886,8 +886,9 @@ type WebConfig struct {
 // templates see it too.
 type WebThemeConfig struct {
 	// Name is the product name in page titles, page text, the footer and
-	// the Apple configuration profile.
-	Name string `example:"\"Example VPN\"" koanf:"name"`
+	// the Apple configuration profile, shown as written. Control
+	// characters are refused.
+	Name PlainText `example:"\"Example VPN\"" koanf:"name"`
 
 	// Logo is the image at the top of every page: an `http://` or
 	// `https://` URL, or a path on this server such as a file in
@@ -928,8 +929,9 @@ type WebThemeConfig struct {
 	Stylesheets []WebURL `example:"[\"/static/brand.css\"]" koanf:"stylesheets"`
 
 	// FooterText is a line of plain text shown at the bottom of every
-	// page, above the "Powered by Headscale" link.
-	FooterText string `example:"\"Operated by the Example IT team\"" koanf:"footer_text"`
+	// page, above the "Powered by Headscale" link. Control characters are
+	// refused.
+	FooterText PlainText `example:"\"Operated by the Example IT team\"" koanf:"footer_text"`
 
 	// HidePoweredBy removes the "Powered by Headscale" link from the
 	// footer.

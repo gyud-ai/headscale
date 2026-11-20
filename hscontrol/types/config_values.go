@@ -7,7 +7,10 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/juanfont/headscale/hscontrol/util"
 	"github.com/rs/zerolog"
@@ -311,6 +314,68 @@ func isFontWords(name string) bool {
 	}
 
 	return true
+}
+
+// maxPlainTextLen is the most characters a [PlainText] may have: a page's
+// longest built-in sentence is about a hundred.
+const maxPlainTextLen = 500
+
+// PlainText is "" or a line of text shown on a page as written: html/template
+// escapes it, so markup shows as text. Control characters, which also break
+// the Apple profile's XML, and the Unicode controls that reorder text are
+// refused, as is a value over [maxPlainTextLen] characters.
+type PlainText string
+
+func (t *PlainText) UnmarshalText(text []byte) error {
+	err := checkPlainText(string(text))
+	if err != nil {
+		return err
+	}
+
+	*t = PlainText(text)
+
+	return nil
+}
+
+func checkPlainText(s string) *ConfigError {
+	if !utf8.ValidString(s) {
+		return &ConfigError{Reason: "is not valid UTF-8", Hint: "save the configuration as UTF-8"}
+	}
+
+	if n := utf8.RuneCountInString(s); n > maxPlainTextLen {
+		return &ConfigError{
+			Reason:  "is too long",
+			Detail:  fmt.Sprintf("%d characters", n),
+			Maximum: strconv.Itoa(maxPlainTextLen) + " characters",
+			Hint:    "shorten the text; a page shows it in one paragraph",
+		}
+	}
+
+	for _, r := range s {
+		switch {
+		case unicode.IsControl(r):
+			return &ConfigError{
+				Reason: "contains a control character",
+				Detail: fmt.Sprintf("U+%04X", r),
+				Hint:   `write the text on one line: a YAML block such as "|" ends with a line break, ">-" does not`,
+			}
+		case isBidiControl(r):
+			return &ConfigError{
+				Reason: "contains a Unicode control that reorders text",
+				Detail: fmt.Sprintf("U+%04X", r),
+				Hint:   "remove it: a browser would show the text in another order than it is written",
+			}
+		}
+	}
+
+	return nil
+}
+
+// isBidiControl reports whether r is a bidirectional embedding, override
+// or isolate, which reorder the text after them (CVE-2021-42574). The
+// marks U+200E and U+200F only set a direction and are allowed.
+func isBidiControl(r rune) bool {
+	return r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069'
 }
 
 // ListenAddr is "" or a TCP host:port address; the port may be "http" or

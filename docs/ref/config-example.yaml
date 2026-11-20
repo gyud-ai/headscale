@@ -437,7 +437,7 @@ web:
   # templates.
   theme:
     # The product name in page titles, page text, the footer and the Apple
-    # configuration profile.
+    # configuration profile, shown as written. Control characters are refused.
     name: Headscale
     # The image at the top of every page: an `http://` or `https://` URL, or a
     # path on this server such as a file in `web.static_dir`. Empty shows no
@@ -472,7 +472,7 @@ web:
     # `web.static_dir`.
     stylesheets: []
     # A line of plain text shown at the bottom of every page, above the "Powered
-    # by Headscale" link.
+    # by Headscale" link. Control characters are refused.
     footer_text: ""
     # Removes the "Powered by Headscale" link from the footer.
     hide_powered_by: false

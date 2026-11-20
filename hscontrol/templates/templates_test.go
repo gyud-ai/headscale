@@ -286,6 +286,9 @@ func TestThemeRejectsInvalid(t *testing.T) {
 		"dark only":  {LogoDark: "/static/logo-dark.svg"},
 		"stylesheet": {Stylesheets: []types.WebURL{"//evil.example.com/x.css"}},
 		"font sheet": {FontStylesheets: []types.WebURL{"fonts.css"}},
+		"open quote": {FontFamily: `"a'"b'`},
+		"name":       {Name: "VPN\x01"},
+		"footer":     {FooterText: "line\nbreak"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := New(&types.Config{Web: types.WebConfig{Theme: theme}})

@@ -209,6 +209,7 @@ the shared layout, or one block of it with Go `html/template` files.
 - Button text on the web pages is black or white, whichever contrasts more with `web.theme.primary_color` (at least 4.5:1), and the hover colour is mixed away from it; the built-in dark scheme's buttons now have black text
 - `web.text` sets the titles, headings and messages of the login pages; a blank value, a control character or an unknown `{placeholder}` fails at startup and in `headscale check all`. Error page headings describe the error ("Access denied", "Session expired") instead of the HTTP status text, and `auth_error.html` gets `.Page.Reason`
 - `web.theme.font_family` and `code_font_family` refuse a list whose quotes do not pair up or that names no font, and `web.theme.name` and `footer_text` refuse control characters
+- A browser gets the branded error page instead of plain text for a bad registration link without OpenID Connect, an unknown `/apple/<platform>` and a path that does not exist (`web.text.auth_error.not_found`); clients, the API and `curl` keep the plain-text responses
 - A SIGHUP now reloads the certificate from `tls.cert_path` and `tls.key_path` without a restart; a certificate that cannot be loaded or is not valid now is logged as an error and the previous one keeps serving [#3027](https://github.com/juanfont/headscale/issues/3027)
 - The NixOS module's `headscale` service now supports `systemctl reload`
 - DERP map refreshes keep the node order. Clients keep their home relay. [#3649](https://github.com/juanfont/headscale/pull/3649)

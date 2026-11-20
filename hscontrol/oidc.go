@@ -706,17 +706,14 @@ const registerConfirmCSRFCookie = "headscale_register_confirm"
 
 // registrationLinkSpentMsg is logged when a user returns to a
 // registration link whose session is gone, which is usually a reload or a
-// back button after they already confirmed. The page the user sees comes
-// from [userMessageForStatusCode].
+// back button after they already confirmed. The page the user sees has
+// the message of [templates.AuthErrorLinkSpent].
 const registrationLinkSpentMsg = "registration link already used or expired"
-
-const registrationLinkSpentUserMsg = "This link has already been used or has expired. " +
-	"If your device is connected you are done; otherwise start the login again."
 
 var errRegistrationLinkSpent = newHTTPUserError(
 	http.StatusGone,
 	registrationLinkSpentMsg,
-	registrationLinkSpentUserMsg,
+	templates.AuthErrorLinkSpent,
 	nil,
 )
 
@@ -1092,7 +1089,7 @@ func (a *AuthProviderOIDC) RegisterConfirmHandler(
 				httpUserError(writer, a.pages(), newHTTPUserError(
 					http.StatusGone,
 					registrationLinkSpentMsg,
-					registrationLinkSpentUserMsg,
+					templates.AuthErrorLinkSpent,
 					err,
 				))
 
@@ -1129,7 +1126,7 @@ func (a *AuthProviderOIDC) handleRegistration(
 	if err != nil {
 		if errors.Is(err, types.ErrHostinfoTooLarge) {
 			return types.NodeView{}, newHTTPUserError(http.StatusBadRequest, "node report too large",
-				"This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.", err)
+				templates.AuthErrorNodeReportTooLarge, err)
 		}
 
 		return types.NodeView{}, fmt.Errorf("registering node: %w", err)

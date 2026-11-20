@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/juanfont/headscale/hscontrol/types"
@@ -58,6 +59,48 @@ type AuthErrorResult struct {
 	// Code is the HTTP status code of the response, e.g. 410. Heading is
 	// its status text.
 	Code int
+
+	// Reason is what went wrong, one of the AuthError values below.
+	// Several reasons share a code: 410 is both AuthErrorExpired and
+	// AuthErrorLinkSpent.
+	Reason string
+}
+
+// The values of AuthErrorResult.Reason.
+const (
+	// AuthErrorUnauthorized is a 401 or 403: the user may not do this.
+	AuthErrorUnauthorized = "unauthorized"
+
+	// AuthErrorExpired is a 410: the login session expired.
+	AuthErrorExpired = "expired"
+
+	// AuthErrorBadRequest is another 4xx: the request could not be used.
+	AuthErrorBadRequest = "bad_request"
+
+	// AuthErrorServerError is a 5xx: headscale failed.
+	AuthErrorServerError = "server_error"
+
+	// AuthErrorLinkSpent is a 410 for a registration link that was already
+	// used, usually a reload after the user confirmed.
+	AuthErrorLinkSpent = "link_spent"
+
+	// AuthErrorNodeReportTooLarge is a 400 for a device whose report to
+	// headscale is over the size limit.
+	AuthErrorNodeReportTooLarge = "node_report_too_large"
+)
+
+// AuthErrorReason is the reason of an error that has only a status code.
+func AuthErrorReason(code int) string {
+	switch {
+	case code == http.StatusUnauthorized || code == http.StatusForbidden:
+		return AuthErrorUnauthorized
+	case code == http.StatusGone:
+		return AuthErrorExpired
+	case code >= 400 && code < 500:
+		return AuthErrorBadRequest
+	default:
+		return AuthErrorServerError
+	}
 }
 
 // AuthSuccessResult contains the text content for an authentication success page.
@@ -234,7 +277,7 @@ var samples = map[string][]any{
 	}},
 	pageAuthError: {AuthErrorResult{
 		Title: "Error", Heading: "Forbidden", Message: "You are not authorized.",
-		Code: 403,
+		Code: 403, Reason: AuthErrorUnauthorized,
 	}},
 	pageRegisterConfirm: {
 		sampleConfirm(),

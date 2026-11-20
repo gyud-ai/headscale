@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/oauth2-proxy/mockoidc"
 	"github.com/stretchr/testify/assert"
@@ -1985,9 +1986,8 @@ func TestOIDCRegistrationRejectsOversizedMergedHostinfo(t *testing.T) {
 	var httpErr HTTPError
 	require.ErrorAs(t, err, &httpErr)
 	assert.Equal(t, http.StatusBadRequest, httpErr.Code)
-	assert.Contains(t, strings.ToLower(httpErr.UserMsg), "reduce")
-	assert.Contains(t, httpErr.UserMsg, "metadata")
-	assert.Contains(t, httpErr.UserMsg, "sign")
+	assert.Equal(t, templates.AuthErrorNodeReportTooLarge, httpErr.Reason)
+	assert.Contains(t, userMessages[httpErr.Reason], "reduce its reported metadata")
 	assert.False(t, registered.Valid())
 
 	after, ok := app.state.GetNodeByID(node.ID)

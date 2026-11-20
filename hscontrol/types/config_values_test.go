@@ -35,7 +35,7 @@ func TestDefaultWebText(t *testing.T) {
 		require.NoError(t, new(PageText).UnmarshalText([]byte(f.Value.String())), f.Path)
 	}
 
-	assert.Equal(t, 29, n, "web.text keys")
+	assert.Equal(t, 31, n, "web.text keys")
 
 	assert.Equal(t, DefaultWebText(), WebTextConfig{}.WithDefaults())
 

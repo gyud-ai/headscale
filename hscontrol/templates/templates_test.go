@@ -328,6 +328,10 @@ func TestWebText(t *testing.T) {
 	assert.Contains(t, spent, "Already done")
 	assert.Contains(t, spent, "This link has already been used")
 
+	notFound := mustRender(t)(r.AuthError(AuthErrorResult{Code: 404}))
+	assert.Contains(t, notFound, "Page not found")
+	assert.Contains(t, notFound, string(types.DefaultWebText().AuthError.NotFound.Message))
+
 	expired := mustRender(t)(r.AuthError(AuthErrorResult{Code: 410}))
 	assert.Contains(t, expired, "Session expired")
 	assert.NotContains(t, expired, "Already done")
@@ -780,7 +784,8 @@ func TestAuthErrorReason(t *testing.T) {
 		http.StatusForbidden:           AuthErrorUnauthorized,
 		http.StatusGone:                AuthErrorExpired,
 		http.StatusBadRequest:          AuthErrorBadRequest,
-		http.StatusNotFound:            AuthErrorBadRequest,
+		http.StatusNotFound:            AuthErrorNotFound,
+		http.StatusMethodNotAllowed:    AuthErrorBadRequest,
 		http.StatusInternalServerError: AuthErrorServerError,
 		http.StatusServiceUnavailable:  AuthErrorServerError,
 		0:                              AuthErrorServerError,

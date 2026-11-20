@@ -407,8 +407,10 @@ type themeCheck struct {
 func newSite(cfg *types.Config) (*Site, error) {
 	theme := cfg.Web.Theme
 
-	checks := make([]themeCheck, 0, 6+len(theme.FontStylesheets)+len(theme.Stylesheets)) //nolint:mnd // the six below
+	checks := make([]themeCheck, 0, 8+len(theme.FontStylesheets)+len(theme.Stylesheets)) //nolint:mnd // the eight below
 	checks = append(checks,
+		themeCheck{"name", string(theme.Name), new(types.PlainText)},
+		themeCheck{"footer_text", string(theme.FooterText), new(types.PlainText)},
 		themeCheck{"logo", string(theme.Logo), new(types.WebURL)},
 		themeCheck{"logo_dark", string(theme.LogoDark), new(types.WebURL)},
 		themeCheck{"primary_color", string(theme.PrimaryColor), new(types.CSSColor)},
@@ -446,7 +448,7 @@ func newSite(cfg *types.Config) (*Site, error) {
 	}
 
 	return &Site{
-		Name:             cmp.Or(theme.Name, types.DefaultWebTheme().Name),
+		Name:             string(cmp.Or(theme.Name, types.DefaultWebTheme().Name)),
 		Logo:             string(theme.Logo),
 		LogoDark:         logoDark(cfg),
 		ServerURL:        cfg.ServerURL,
@@ -456,9 +458,9 @@ func newSite(cfg *types.Config) (*Site, error) {
 		CodeFontFamily:   string(theme.CodeFontFamily),
 		FontStylesheets:  urls(theme.FontStylesheets),
 		Stylesheets:      urls(theme.Stylesheets),
-		FooterText:       theme.FooterText,
+		FooterText:       string(theme.FooterText),
 		HidePoweredBy:    theme.HidePoweredBy,
-		ProfileFileName:  profileFileName(cmp.Or(theme.Name, types.DefaultWebTheme().Name)),
+		ProfileFileName:  profileFileName(string(cmp.Or(theme.Name, types.DefaultWebTheme().Name))),
 		ThemeCSS:         themeCSS(theme),
 	}, nil
 }

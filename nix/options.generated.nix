@@ -1004,7 +1004,7 @@ in
         type = lib.types.str;
         default = "Headscale";
         description = ''
-          The product name in page titles, page text, the footer and the Apple configuration profile.
+          The product name in page titles, page text, the footer and the Apple configuration profile, shown as written. Control characters are refused.
         '';
         example = "Example VPN";
       };
@@ -1083,7 +1083,7 @@ in
         type = lib.types.str;
         default = "";
         description = ''
-          A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link.
+          A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link. Control characters are refused.
         '';
         example = "Operated by the Example IT team";
       };

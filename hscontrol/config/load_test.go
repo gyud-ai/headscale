@@ -806,6 +806,17 @@ func TestDecodeErrors(t *testing.T) {
 		assert.NotContains(t, err.Error(), "server_url")
 	})
 
+	t.Run("web theme text and fonts", func(t *testing.T) {
+		_, err := decodeInput(t, "config.yaml", "web:\n  theme:\n    name: \"VPN\\x01\"\n    footer_text: \"a\\u202eb\"\n    font_family: \"\\\"a'\\\"b'\"\n")
+		require.Error(t, err)
+
+		got := reasons(types.ConfigErrors(err))
+		require.Len(t, got, 3, "%v", got)
+		assert.Contains(t, got[0], "web.theme.name contains a control character")
+		assert.Contains(t, got[1], "web.theme.font_family is not a CSS font list")
+		assert.Contains(t, got[2], "web.theme.footer_text contains a Unicode control that reorders text")
+	})
+
 	for name, tt := range map[string]struct {
 		file string
 		env  []string

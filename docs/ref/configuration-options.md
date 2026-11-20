@@ -3238,7 +3238,7 @@ The name, logo, colours and fonts of the pages, set without writing templates.
 - **Default:** `Headscale`
 - **Env:** `HEADSCALE_WEB_THEME_NAME`
 
-The product name in page titles, page text, the footer and the Apple configuration profile.
+The product name in page titles, page text, the footer and the Apple configuration profile, shown as written. Control characters are refused.
 
 === "YAML"
 
@@ -3496,7 +3496,7 @@ Extra stylesheets loaded after the built-in one, so their rules win: an `http://
 - **Default:** `""`
 - **Env:** `HEADSCALE_WEB_THEME_FOOTER_TEXT`
 
-A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link.
+A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link. Control characters are refused.
 
 === "YAML"
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -90,6 +91,19 @@ func TestConfigValues(t *testing.T) {
 		{name: "fontfamily/digits", dst: new(FontFamily), in: "123", wantErr: "is not a CSS font list"},
 		{name: "fontfamily/word starting with digit", dst: new(FontFamily), in: "Noto 2Sans", wantErr: "is not a CSS font list"},
 		{name: "fontfamily/hyphen digit", dst: new(FontFamily), in: "-1x", wantErr: "is not a CSS font list"},
+
+		{name: "plaintext/empty", dst: new(PlainText), in: "", want: PlainText("")},
+		{name: "plaintext/text", dst: new(PlainText), in: "Run by <IT> & co.", want: PlainText("Run by <IT> & co.")},
+		{name: "plaintext/unicode", dst: new(PlainText), in: "Ünïcödé \u540d\u524d \u200f", want: PlainText("Ünïcödé \u540d\u524d \u200f")},
+		{name: "plaintext/longest", dst: new(PlainText), in: strings.Repeat("é", maxPlainTextLen), want: PlainText(strings.Repeat("é", maxPlainTextLen))},
+		{name: "plaintext/too long", dst: new(PlainText), in: strings.Repeat("a", maxPlainTextLen+1), wantErr: "is too long"},
+		{name: "plaintext/control", dst: new(PlainText), in: "a\x01b", wantErr: "contains a control character"},
+		{name: "plaintext/line break", dst: new(PlainText), in: "text\n", wantErr: "contains a control character"},
+		{name: "plaintext/tab", dst: new(PlainText), in: "a\tb", wantErr: "contains a control character"},
+		{name: "plaintext/c1 control", dst: new(PlainText), in: "a\u0085b", wantErr: "contains a control character"},
+		{name: "plaintext/bidi override", dst: new(PlainText), in: "abc\u202edcba", wantErr: "reorders text"},
+		{name: "plaintext/bidi isolate", dst: new(PlainText), in: "abc\u2067x", wantErr: "reorders text"},
+		{name: "plaintext/invalid utf-8", dst: new(PlainText), in: "a\xffb", wantErr: "is not valid UTF-8"},
 
 		{name: "listenaddr/empty", dst: new(ListenAddr), in: "", want: ListenAddr("")},
 		{name: "listenaddr/port only", dst: new(ListenAddr), in: ":8080", want: ListenAddr(":8080")},

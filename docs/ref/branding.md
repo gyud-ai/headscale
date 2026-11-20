@@ -10,7 +10,8 @@ Headscale serves a few pages to browsers: the client setup pages `/apple` and `/
 colours and fonts, and their HTML can be replaced entirely, without rebuilding headscale. There are three levels, each
 building on the previous one:
 
-1. A **theme**, set in the configuration file: name, logo, colours, fonts and footer.
+1. A **theme** and **page text**, set in the configuration file: name, logo, colours, fonts, footer, and the headings
+   and messages of the login pages.
 1. **Static files**: your logo, stylesheets and fonts, served by headscale under `/static/`.
 1. **Templates**: replace one block of the layout, a whole page, or the layout of every page.
 
@@ -91,6 +92,46 @@ fonts, and `font_family` and `code_font_family` choose them:
     ```
 
     The pages then make no request to a font service.
+
+## Page text
+
+`text` sets the titles, headings and messages of the login pages, by page and case. A key you leave out keeps the
+built-in English text; see the [configuration options](configuration-options.md) for every key and its default.
+
+```yaml title="config.yaml"
+web:
+  text:
+    auth_success:
+      register:
+        heading: "You are connected to {name}"
+        message: "You can close this tab."
+    auth_error:
+      title: "Sign-in problem"
+      unauthorized:
+        message: "Ask the IT team at it@example.com for access."
+```
+
+| Key                                | Page                                                                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| `auth_web.register`                | `/register/<id>` without OpenID Connect: `title` and the `description` above the command |
+| `auth_web.auth`                    | `/auth/<id>` without OpenID Connect                                                      |
+| `auth_success.register`            | A new node registered: `title`, `heading`, and "`verb` as _user_. `message`"             |
+| `auth_success.reauth`              | An existing node logged in again                                                         |
+| `auth_success.ssh`                 | An SSH session a `check` rule held, now approved                                         |
+| `auth_error.title`                 | The page title of every error                                                            |
+| `auth_error.unauthorized`          | A 401 or 403, such as a login outside `oidc.allowed_domains`: `heading` and `message`    |
+| `auth_error.expired`               | A 410: the login took too long and its session expired                                   |
+| `auth_error.bad_request`           | Another 4xx: the request could not be used                                               |
+| `auth_error.server_error`          | A 5xx: headscale failed or is busy                                                       |
+| `auth_error.link_spent`            | A registration link that was already used, usually a reload after the user confirmed     |
+| `auth_error.node_report_too_large` | A device whose report to headscale is over the size limit                                |
+
+Each value is one line of plain text, shown as written: markup is escaped, not rendered. `{name}` in a value is replaced
+by `theme.name`. Headscale refuses to start, and `headscale check all` fails, naming the key, for a value that is blank,
+has a line break or another control character, is over 500 characters, or holds any `{` that is not `{name}`. To remove
+a text rather than change it, replace the page's [template](#templates).
+
+The error pages tell the user what to do; what went wrong is in the server log.
 
 ## Static files
 
@@ -350,16 +391,18 @@ as `html/template` does: a hostname a device reports cannot add markup to the pa
 | `register_confirm.html`                    | `FormAction`, `CSRFTokenName`, `CSRFToken`, `User`, `Hostname`, `OS`, `MachineKey`, `ExistingNode`, `Tags` |
 | `ssh_check_confirm.html`                   | `Source`, `Destination`, and the fields of `register_confirm.html`                                         |
 | `auth_success.html`                        | `Title`, `Heading`, `Verb`, `User`, `Message`, `Kind`                                                      |
-| `auth_error.html`                          | `Title`, `Heading`, `Message`, `Code`                                                                      |
+| `auth_error.html`                          | `Title`, `Heading`, `Message`, `Code`, `Reason`                                                            |
 | `ping.html`                                | `Query`, `Result` (`Status`, `Latency`, `NodeID`, `Message`), `Nodes` (`ID`, `Hostname`, `IPs`)            |
 
-The text fields hold headscale's English wording. To word or translate a page yourself, branch on the fields that say
-which case it is:
+The text fields hold the [page text](#page-text) of the case. To word or translate a page yourself, branch on the fields
+that say which case it is:
 
 - `auth_web.html`: `Kind` is `register` (`/register/{id}`, a new node) or `auth` (`/auth/{id}`, an auth request), and
   `AuthID` is the ID the command names.
 - `auth_success.html`: `Kind` is `register`, `reauth` (a node logged in again) or `ssh` (an SSH session approved).
-- `auth_error.html`: `Code` is the HTTP status code, such as `403` or `410`; `Heading` is its status text.
+- `auth_error.html`: `Reason` is `unauthorized`, `expired`, `bad_request`, `server_error`, `link_spent` or
+  `node_report_too_large`, the keys of `text.auth_error`. `Code` is the HTTP status code, such as `403` or `410`;
+  several reasons share one, so branch on `Reason`.
 
 ```html title="auth_success.html"
 {{template "layout" .}}
@@ -397,7 +440,7 @@ headscale check all
 ```
 
 Send headscale a `SIGHUP`, or run `systemctl reload headscale`, to read the templates again. A template that fails to
-load is logged and the previous templates keep serving. The `theme` is read only at startup.
+load is logged and the previous templates keep serving. The `theme` and the `text` are read only at startup.
 
 Templates are code run by headscale: keep `templates_dir` writable only by the administrators of the server.
 
@@ -405,7 +448,8 @@ Templates are code run by headscale: keep `templates_dir` writable only by the a
 
 Some parts of the pages are not settings, on purpose:
 
-- **The `/debug/ping` page** is on `metrics_listen_addr`, for administrators. Its text is not themed beyond the layout.
+- **The `/debug/ping` page** is on `metrics_listen_addr`, for administrators. Its text is not themed beyond the layout,
+  and `text` does not cover it.
 - **`lang="en"`** on every page. The built-in text is English; declaring another language without translating it would
   mislead browsers and screen readers. A page or layout you write yourself can set its own.
 - **Sizes and spacing** are [stylesheet variables](#stylesheet-variables), not `theme` settings: a stylesheet in

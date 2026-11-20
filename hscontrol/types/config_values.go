@@ -217,9 +217,11 @@ func isHexColor(s string) bool {
 }
 
 // FontFamily is "" or a CSS font-family list, such as `"Inter", sans-serif`:
-// letters, digits, spaces, commas, hyphens, underscores and balanced
-// quotes. Anything else, such as ";" or "}", is refused so the value can be
-// written into a stylesheet as is.
+// font names separated by commas, each either quoted or one or more words
+// of letters, digits, hyphens and underscores that do not start with a
+// digit. Anything else, such as ";" or "}", is refused so the value can be
+// written into a stylesheet as is, and an empty name or a quote left open
+// is refused because the browser would drop the whole list.
 type FontFamily string
 
 func (f *FontFamily) UnmarshalText(text []byte) error {
@@ -245,7 +247,70 @@ func isFontFamily(s string) bool {
 		}
 	}
 
-	return strings.Count(s, `"`)%2 == 0 && strings.Count(s, `'`)%2 == 0
+	// Each pass reads one name and the comma after it.
+	for {
+		s = strings.TrimLeft(s, " ")
+		if s == "" {
+			return false // an empty name, as in "a,,b" or "a,"
+		}
+
+		if q := s[0]; q == '"' || q == '\'' {
+			// A quoted name ends at the same quote; the other quote and
+			// commas inside it are part of the name.
+			end := strings.IndexByte(s[1:], q)
+			if end < 0 || strings.TrimSpace(s[1:end+1]) == "" {
+				return false
+			}
+
+			s = strings.TrimLeft(s[end+2:], " ")
+			if s == "" {
+				return true
+			}
+
+			rest, ok := strings.CutPrefix(s, ",")
+			if !ok {
+				return false
+			}
+
+			s = rest
+
+			continue
+		}
+
+		name, rest, more := strings.Cut(s, ",")
+		if !isFontWords(name) {
+			return false
+		}
+
+		if !more {
+			return true
+		}
+
+		s = rest
+	}
+}
+
+// isFontWords reports whether name is an unquoted font name: words of
+// letters, digits, hyphens and underscores, none starting with a digit or
+// with a hyphen and a digit.
+func isFontWords(name string) bool {
+	words := strings.Fields(name)
+	if len(words) == 0 {
+		return false
+	}
+
+	for _, w := range words {
+		if strings.ContainsAny(w, `"'`) {
+			return false
+		}
+
+		d := strings.TrimPrefix(w, "-")
+		if d == "" || d[0] >= '0' && d[0] <= '9' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // ListenAddr is "" or a TCP host:port address; the port may be "http" or

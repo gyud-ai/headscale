@@ -1,12 +1,15 @@
 package hscontrol
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
@@ -56,6 +59,19 @@ func httpError(w http.ResponseWriter, err error) {
 			Int(zf.Code, http.StatusInternalServerError).
 			Msg("http internal server error")
 	}
+}
+
+// httpErrorFor answers a request that a browser or a client can make: the
+// error page when the request asks for HTML (see wantsPage), otherwise the
+// plain-text message, which tells a client or script what was wrong.
+func (h *Headscale) httpErrorFor(w http.ResponseWriter, req *http.Request, err error) {
+	if wantsPage(req) {
+		httpUserError(w, h.pages, err)
+
+		return
+	}
+
+	httpError(w, err)
 }
 
 // httpUserError logs an error and sends a styled HTML error page,
@@ -351,7 +367,7 @@ func (a *AuthProviderWeb) AuthHandler(
 ) {
 	authID, err := authIDFromRequest(req)
 	if err != nil {
-		httpError(writer, err)
+		httpUserError(writer, a.pages, err)
 		return
 	}
 
@@ -387,7 +403,7 @@ func (a *AuthProviderWeb) RegisterHandler(
 ) {
 	authId, err := authIDFromRequest(req)
 	if err != nil {
-		httpError(writer, err)
+		httpUserError(writer, a.pages, err)
 		return
 	}
 
@@ -396,6 +412,48 @@ func (a *AuthProviderWeb) RegisterHandler(
 		Kind:    templates.AuthWebRegister,
 		AuthID:  authId.String(),
 	}))
+}
+
+// NotFoundHandler answers a request no route matches. A browser asking
+// for a page gets the error page; anything else, such as a client or an
+// API call, gets the plain "404 page not found" as before. It does not log:
+// the request logger records every request, and scanners probe at random.
+func (h *Headscale) NotFoundHandler(writer http.ResponseWriter, req *http.Request) {
+	if !wantsPage(req) {
+		http.NotFound(writer, req)
+		return
+	}
+
+	writePage(writer, http.StatusNotFound)(h.pages.AuthError(templates.AuthErrorResult{Code: http.StatusNotFound}))
+}
+
+// wantsPage reports whether req is a browser asking for a page: a GET or
+// HEAD outside /api whose Accept header takes text/html, as a browser's
+// navigation does. Clients and API callers do not ask for HTML.
+func wantsPage(req *http.Request) bool {
+	if req.Method != http.MethodGet && req.Method != http.MethodHead {
+		return false
+	}
+
+	if req.URL.Path == "/api" || strings.HasPrefix(req.URL.Path, "/api/") {
+		return false
+	}
+
+	for _, accept := range req.Header.Values("Accept") {
+		for part := range strings.SplitSeq(accept, ",") {
+			mt, params, err := mime.ParseMediaType(strings.TrimSpace(part))
+			if err != nil || mt != "text/html" {
+				continue
+			}
+
+			q, err := strconv.ParseFloat(cmp.Or(params["q"], "1"), 64)
+			if err == nil && q > 0 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // BlankHandler serves /: by default a blank page that only sets the

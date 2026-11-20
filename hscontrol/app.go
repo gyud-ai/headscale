@@ -587,6 +587,7 @@ func (h *Headscale) createRouter(apiV1Mux, apiV2Mux http.Handler) *chi.Mux {
 	r.Handle(templates.StaticPrefix+"*", h.pages.StaticHandler())
 	r.Get("/favicon.ico", h.pages.ServeFavicon)
 	r.Get("/", h.BlankHandler)
+	r.NotFound(h.NotFoundHandler)
 
 	return r
 }

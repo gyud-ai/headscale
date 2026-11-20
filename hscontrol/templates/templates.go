@@ -717,6 +717,8 @@ func (r *Renderer) AuthError(d AuthErrorResult) ([]byte, error) {
 		t = e.Expired
 	case AuthErrorBadRequest:
 		t = e.BadRequest
+	case AuthErrorNotFound:
+		t = e.NotFound
 	case AuthErrorLinkSpent:
 		t = e.LinkSpent
 	case AuthErrorNodeReportTooLarge:

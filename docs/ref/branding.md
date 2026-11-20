@@ -121,7 +121,8 @@ web:
 | `auth_error.title`                 | The page title of every error                                                            |
 | `auth_error.unauthorized`          | A 401 or 403, such as a login outside `oidc.allowed_domains`: `heading` and `message`    |
 | `auth_error.expired`               | A 410: the login took too long and its session expired                                   |
-| `auth_error.bad_request`           | Another 4xx: the request could not be used                                               |
+| `auth_error.bad_request`           | Another 4xx: the request could not be used, such as a cut-short link                     |
+| `auth_error.not_found`             | A 404: a browser asked for a page that does not exist                                    |
 | `auth_error.server_error`          | A 5xx: headscale failed or is busy                                                       |
 | `auth_error.link_spent`            | A registration link that was already used, usually a reload after the user confirmed     |
 | `auth_error.node_report_too_large` | A device whose report to headscale is over the size limit                                |
@@ -313,7 +314,7 @@ headscale generate web /etc/headscale/web
 | `register_confirm.html`  | OpenID Connect: confirming that a registering device is yours                          |
 | `ssh_check_confirm.html` | OpenID Connect: approving an SSH session held by a `check` rule                        |
 | `auth_success.html`      | After a confirmed login                                                                |
-| `auth_error.html`        | A failed login or confirmation                                                         |
+| `auth_error.html`        | A failed login or confirmation, a bad link, or a page that does not exist              |
 | `blank.html`             | `/`, empty by default                                                                  |
 | `ping.html`              | `/debug/ping` on `metrics_listen_addr`                                                 |
 
@@ -400,7 +401,7 @@ that say which case it is:
 - `auth_web.html`: `Kind` is `register` (`/register/{id}`, a new node) or `auth` (`/auth/{id}`, an auth request), and
   `AuthID` is the ID the command names.
 - `auth_success.html`: `Kind` is `register`, `reauth` (a node logged in again) or `ssh` (an SSH session approved).
-- `auth_error.html`: `Reason` is `unauthorized`, `expired`, `bad_request`, `server_error`, `link_spent` or
+- `auth_error.html`: `Reason` is `unauthorized`, `expired`, `bad_request`, `not_found`, `server_error`, `link_spent` or
   `node_report_too_large`, the keys of `text.auth_error`. `Code` is the HTTP status code, such as `403` or `410`;
   several reasons share one, so branch on `Reason`.
 
@@ -454,5 +455,10 @@ Some parts of the pages are not settings, on purpose:
   mislead browsers and screen readers. A page or layout you write yourself can set its own.
 - **Sizes and spacing** are [stylesheet variables](#stylesheet-variables), not `theme` settings: a stylesheet in
   `theme.stylesheets` sets them. A config key for each would only repeat CSS.
+- **Plain-text errors for clients and the API.** A browser gets `auth_error.html` for a bad registration link, an
+  unknown `/apple/<platform>` and a path that does not exist. The same router serves the Tailscale clients and the API,
+  so an unknown path gets the page only when the request asks for HTML, as a browser's navigation does: a `GET` or
+  `HEAD` outside `/api` whose `Accept` header takes `text/html`. Anything else, `curl` included, keeps the plain
+  `404 page not found`, and so does a missing file under `/static/`.
 - **The commands on `auth_web.html`** are built by headscale so they match its CLI. A custom page can build its own from
   `Kind` and `AuthID`.

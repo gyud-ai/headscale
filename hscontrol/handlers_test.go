@@ -541,3 +541,81 @@ func TestErrForLog(t *testing.T) {
 	long := fmt.Errorf("parsing %q: %w", strings.Repeat("x", 4000), errTestUnexpected)
 	requireClipped(t, long.Error(), errForLog(long).Error())
 }
+
+// TestWantsPage: only a browser asking for a page outside /api gets the
+// error page for an unknown path; clients and API callers keep plain text.
+func TestWantsPage(t *testing.T) {
+	t.Parallel()
+
+	const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+
+	tests := []struct {
+		name   string
+		method string
+		path   string
+		accept string
+		want   bool
+	}{
+		{"browser", http.MethodGet, "/nope", browser, true},
+		{"browser head", http.MethodHead, "/nope", browser, true},
+		{"html only", http.MethodGet, "/register/", "text/html", true},
+		{"html with parameters", http.MethodGet, "/nope", "text/html; charset=utf-8; q=0.5", true},
+		{"no accept", http.MethodGet, "/nope", "", false},
+		{"curl", http.MethodGet, "/nope", "*/*", false},
+		{"json", http.MethodGet, "/nope", "application/json", false},
+		{"html refused", http.MethodGet, "/nope", "text/html;q=0, */*", false},
+		{"html refused with decimals", http.MethodGet, "/nope", "text/html;q=0.000", false},
+		{"post", http.MethodPost, "/nope", browser, false},
+		{"api", http.MethodGet, "/api/v1/nope", browser, false},
+		{"api root", http.MethodGet, "/api", browser, false},
+		{"api-like path", http.MethodGet, "/apiary", browser, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, nil)
+			if tt.accept != "" {
+				req.Header.Set("Accept", tt.accept)
+			}
+
+			assert.Equal(t, tt.want, wantsPage(req))
+		})
+	}
+}
+
+// TestNotFoundHandler: the page for a browser, plain text for the rest,
+// and AuthProviderWeb's bad links get the page too.
+func TestNotFoundHandler(t *testing.T) {
+	t.Parallel()
+
+	h := &Headscale{}
+
+	page := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/nope", nil)
+	req.Header.Set("Accept", "text/html")
+	h.NotFoundHandler(page, req)
+	assert.Equal(t, http.StatusNotFound, page.Code)
+	assert.Equal(t, "text/html; charset=utf-8", page.Header().Get("Content-Type"))
+	assert.Contains(t, page.Body.String(), "Page not found")
+
+	plain := httptest.NewRecorder()
+	h.NotFoundHandler(plain, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/nope", nil))
+	assert.Equal(t, http.StatusNotFound, plain.Code)
+	assert.Equal(t, "404 page not found\n", plain.Body.String())
+
+	web := NewAuthProviderWeb("https://hs.example.com", nil)
+
+	for name, handle := range map[string]http.HandlerFunc{"register": web.RegisterHandler, "auth": web.AuthHandler} {
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/"+name+"/x", nil)
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("auth_id", "not-an-auth-id")
+		handle(rec, r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx)))
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code, name)
+		assert.Contains(t, rec.Body.String(), "Request not accepted", name)
+		assert.NotContains(t, rec.Body.String(), "invalid auth id", name)
+	}
+}

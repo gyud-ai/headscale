@@ -1987,7 +1987,7 @@ func TestOIDCRegistrationRejectsOversizedMergedHostinfo(t *testing.T) {
 	require.ErrorAs(t, err, &httpErr)
 	assert.Equal(t, http.StatusBadRequest, httpErr.Code)
 	assert.Equal(t, templates.AuthErrorNodeReportTooLarge, httpErr.Reason)
-	assert.Contains(t, userMessages[httpErr.Reason], "reduce its reported metadata")
+	assert.Contains(t, string(types.DefaultWebText().AuthError.NodeReportTooLarge.Message), "reduce its reported metadata")
 	assert.False(t, registered.Valid())
 
 	after, ok := app.state.GetNodeByID(node.ID)

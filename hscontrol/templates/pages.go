@@ -14,10 +14,12 @@ import (
 // AuthWebData is the page that tells an administrator which command
 // approves a registration or an auth request, without OpenID Connect.
 type AuthWebData struct {
-	// Title is the heading, e.g. "Node registration".
+	// Title is the heading, e.g. "Node registration": the
+	// web.text.auth_web title of Kind.
 	Title string
 
-	// Description introduces the command.
+	// Description introduces the command: the web.text.auth_web
+	// description of Kind.
 	Description string
 
 	// Command is the headscale CLI command to run.
@@ -44,20 +46,19 @@ const (
 // (OIDC callback, SSH check, registration confirmation, etc.).
 type AuthErrorResult struct {
 	// Title is the browser tab / page title, before the site name,
-	// e.g. "Error".
+	// e.g. "Error": web.text.auth_error.title.
 	Title string
 
 	// Heading is the bold red text inside the error box,
-	// e.g. "Forbidden".
+	// e.g. "Access denied": the web.text.auth_error heading of Reason.
 	Heading string
 
 	// Message is the actionable user-facing message shown below
 	// the heading, e.g. "You are not authorized. Please contact
-	// your administrator."
+	// your administrator.": the web.text.auth_error message of Reason.
 	Message string
 
-	// Code is the HTTP status code of the response, e.g. 410. Heading is
-	// its status text.
+	// Code is the HTTP status code of the response, e.g. 410.
 	Code int
 
 	// Reason is what went wrong, one of the AuthError values below.
@@ -106,7 +107,8 @@ func AuthErrorReason(code int) string {
 // AuthSuccessResult contains the text content for an authentication success page.
 // Each field controls a distinct piece of user-facing text so that every auth
 // flow (node registration, reauthentication, SSH check, …) can clearly
-// communicate what just happened.
+// communicate what just happened. Title, Heading, Verb and Message are the
+// web.text.auth_success text of Kind.
 type AuthSuccessResult struct {
 	// Title is the browser tab / page title, before the site name,
 	// e.g. "Node Registered".

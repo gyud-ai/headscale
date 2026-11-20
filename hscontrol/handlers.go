@@ -62,8 +62,8 @@ func httpError(w http.ResponseWriter, err error) {
 // rendered by pages (nil for the built-in one). Use this for
 // browser-facing error paths (OIDC, registration confirm) where the user
 // should see a branded page instead of plain text. Technical details go
-// to the server log; the HTML page only shows an actionable message for
-// the error's reason, or one derived from the HTTP status code.
+// to the server log; the HTML page shows the web.text of the error's
+// reason, or of one derived from the HTTP status code.
 func httpUserError(w http.ResponseWriter, pages *templates.Renderer, err error) {
 	code := http.StatusInternalServerError
 	reason := ""
@@ -82,17 +82,7 @@ func httpUserError(w http.ResponseWriter, pages *templates.Renderer, err error) 
 			Msg("http internal server error")
 	}
 
-	if reason == "" {
-		reason = templates.AuthErrorReason(code)
-	}
-
-	writePage(w, code)(pages.AuthError(templates.AuthErrorResult{
-		Title:   "Error",
-		Heading: http.StatusText(code),
-		Message: userMessages[reason],
-		Code:    code,
-		Reason:  reason,
-	}))
+	writePage(w, code)(pages.AuthError(templates.AuthErrorResult{Code: code, Reason: reason}))
 }
 
 // writePage returns a function that writes a rendered page with status,
@@ -115,18 +105,6 @@ func writePage(w http.ResponseWriter, status int) func([]byte, error) {
 			log.Error().Err(err).Msg("writing web page")
 		}
 	}
-}
-
-// userMessages is the message of each error page reason.
-var userMessages = map[string]string{
-	templates.AuthErrorUnauthorized: "You are not authorized. Please contact your administrator.",
-	templates.AuthErrorExpired:      "Your session has expired. Please try again.",
-	templates.AuthErrorBadRequest:   "The request could not be processed. Please try again.",
-	templates.AuthErrorServerError:  "Something went wrong. Please try again later.",
-	templates.AuthErrorLinkSpent: "This link has already been used or has expired. " +
-		"If your device is connected you are done; otherwise start the login again.",
-	templates.AuthErrorNodeReportTooLarge: "This device reports too much data. " +
-		"Ask your administrator to reduce its reported metadata, then sign in again.",
 }
 
 // HTTPError represents an error that is surfaced to the user via web.
@@ -378,11 +356,9 @@ func (a *AuthProviderWeb) AuthHandler(
 	}
 
 	writePage(writer, http.StatusOK)(a.pages.AuthWeb(templates.AuthWebData{
-		Title:       "Authentication check",
-		Description: "Run the command below in the headscale server to approve this authentication request:",
-		Command:     "headscale auth approve --auth-id " + authID.String(),
-		Kind:        templates.AuthWebAuth,
-		AuthID:      authID.String(),
+		Command: "headscale auth approve --auth-id " + authID.String(),
+		Kind:    templates.AuthWebAuth,
+		AuthID:  authID.String(),
 	}))
 }
 
@@ -416,11 +392,9 @@ func (a *AuthProviderWeb) RegisterHandler(
 	}
 
 	writePage(writer, http.StatusOK)(a.pages.AuthWeb(templates.AuthWebData{
-		Title:       "Node registration",
-		Description: "Run the command below in the headscale server to add this node to your network:",
-		Command:     fmt.Sprintf("headscale auth register --auth-id %s --user USERNAME", authId.String()),
-		Kind:        templates.AuthWebRegister,
-		AuthID:      authId.String(),
+		Command: fmt.Sprintf("headscale auth register --auth-id %s --user USERNAME", authId.String()),
+		Kind:    templates.AuthWebRegister,
+		AuthID:  authId.String(),
 	}))
 }
 

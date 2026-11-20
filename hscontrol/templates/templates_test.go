@@ -71,12 +71,10 @@ func TestBuiltinPages(t *testing.T) {
 		"windows": mustRender(t)(r.Windows()),
 		"blank":   mustRender(t)(r.Blank()),
 		"auth web": mustRender(t)(r.AuthWeb(AuthWebData{
-			Title: "Node registration", Description: "Run:", Command: "headscale auth register --auth-id abc --user USERNAME",
+			Command: "headscale auth register --auth-id abc --user USERNAME", Kind: AuthWebRegister,
 		})),
-		"success": mustRender(t)(r.AuthSuccess(AuthSuccessResult{
-			Title: "Node Registered", Heading: "Node registered", Verb: "Registered", User: "alice", Message: "Done.",
-		})),
-		"error":            mustRender(t)(r.AuthError(AuthErrorResult{Title: "Error", Heading: "Forbidden", Message: "No."})),
+		"success":          mustRender(t)(r.AuthSuccess(AuthSuccessResult{User: "alice", Kind: AuthSuccessRegister})),
+		"error":            mustRender(t)(r.AuthError(AuthErrorResult{Code: 403})),
 		"register confirm": mustRender(t)(r.RegisterConfirm(sampleConfirm())),
 		"ssh check":        mustRender(t)(r.SSHCheckConfirm(SSHCheckData{RegisterConfirmInfo: sampleConfirm(), Source: "a", Destination: "b"})),
 		"ping":             mustRender(t)(r.Ping(PingData{})),
@@ -95,7 +93,9 @@ func TestBuiltinPages(t *testing.T) {
 	assert.Contains(t, pages["auth web"], "<code>headscale auth register --auth-id abc --user USERNAME</code>")
 	assert.Contains(t, pages["apple"], "<code>https://hs.example.com</code>")
 	assert.Contains(t, pages["windows"], "tailscale login --login-server https://hs.example.com")
-	assert.Contains(t, pages["success"], "Registered as <strong>alice</strong>. Done.")
+	assert.Contains(t, pages["auth web"], "<title>Node registration - Headscale</title>")
+	assert.Contains(t, pages["success"], "Registered as <strong>alice</strong>. You can now close this window.")
+	assert.Contains(t, pages["error"], "Access denied")
 	assert.Contains(t, pages["success"], `id="checkbox"`)
 	assert.Contains(t, pages["success"], "<h2>Getting started</h2>")
 	assert.Contains(t, pages["success"], `href="https://headscale.net/stable/"`)
@@ -129,7 +129,11 @@ func TestPageEscaping(t *testing.T) {
 			confirm := mustRender(t)(r.RegisterConfirm(c))
 			assert.NotContains(t, confirm, p)
 
-			e := mustRender(t)(r.AuthError(AuthErrorResult{Title: p, Heading: p, Message: p}))
+			var text types.WebTextConfig
+
+			text.AuthError.Title = types.PageText(p)
+			text.AuthError.Unauthorized = types.WebErrorText{Heading: types.PageText(p), Message: types.PageText(p)}
+			e := mustRender(t)(newTestRenderer(t, types.WebConfig{Text: text}).AuthError(AuthErrorResult{Code: 403}))
 			assert.NotContains(t, e, p)
 		})
 	}
@@ -194,7 +198,7 @@ func TestTheme(t *testing.T) {
 	apple := mustRender(t)(r.Apple())
 	assert.Equal(t, 2, strings.Count(apple, `download="example_vpn_macos.mobileconfig"`))
 
-	success := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Heading: "Node registered", Verb: "Registered", User: "alice"}))
+	success := mustRender(t)(r.AuthSuccess(AuthSuccessResult{User: "alice", Kind: AuthSuccessRegister}))
 	assert.Contains(t, success, "Registered as <strong>alice</strong>.")
 	assert.NotContains(t, success, "Getting started", "hide_powered_by hides the headscale links")
 
@@ -298,12 +302,52 @@ func TestThemeRejectsInvalid(t *testing.T) {
 	}
 }
 
+// TestWebText: each page takes its text from web.text by kind or reason,
+// with {name} replaced, and the built-in text for a key left out.
+func TestWebText(t *testing.T) {
+	var text types.WebTextConfig
+
+	text.AuthWeb.Auth.Title = "Approve a login to {name}"
+	text.AuthSuccess.SSH = types.WebSuccessText{Heading: "SSH OK", Verb: "Approved", Message: "Back to {name}."}
+	text.AuthError.Title = "Problem"
+	text.AuthError.LinkSpent.Heading = "Already done"
+
+	r := newTestRenderer(t, types.WebConfig{Text: text, Theme: types.WebThemeConfig{Name: "Example VPN"}})
+
+	web := mustRender(t)(r.AuthWeb(AuthWebData{Command: "headscale auth approve --auth-id x", Kind: AuthWebAuth}))
+	assert.Contains(t, web, "<title>Approve a login to Example VPN - Example VPN</title>")
+	assert.Contains(t, web, string(types.DefaultWebText().AuthWeb.Auth.Description))
+
+	ssh := mustRender(t)(r.AuthSuccess(AuthSuccessResult{User: "alice", Kind: AuthSuccessSSH}))
+	assert.Contains(t, ssh, "SSH OK")
+	assert.Contains(t, ssh, "Approved as <strong>alice</strong>. Back to Example VPN.")
+	assert.Contains(t, ssh, "<title>"+string(types.DefaultWebText().AuthSuccess.SSH.Title)+" - Example VPN</title>")
+
+	spent := mustRender(t)(r.AuthError(AuthErrorResult{Code: 410, Reason: AuthErrorLinkSpent}))
+	assert.Contains(t, spent, "<title>Problem - Example VPN</title>")
+	assert.Contains(t, spent, "Already done")
+	assert.Contains(t, spent, "This link has already been used")
+
+	expired := mustRender(t)(r.AuthError(AuthErrorResult{Code: 410}))
+	assert.Contains(t, expired, "Session expired")
+	assert.NotContains(t, expired, "Already done")
+
+	var bad types.WebTextConfig
+
+	bad.AuthError.Expired.Message = "Hello {user}"
+
+	cfg := types.Config{Web: types.WebConfig{Text: bad}}
+	_, err := New(&cfg)
+	require.ErrorContains(t, err, "web.text.auth_error.expired.message")
+	require.ErrorContains(t, CheckTemplates(&cfg), "has an unknown placeholder")
+}
+
 func TestNilRenderer(t *testing.T) {
 	var r *Renderer
 
-	html := mustRender(t)(r.AuthError(AuthErrorResult{Title: "Error", Heading: "Gone", Message: "Expired."}))
+	html := mustRender(t)(r.AuthError(AuthErrorResult{Code: 410}))
 	assert.Contains(t, html, "<title>Error - Headscale</title>")
-	assert.Contains(t, html, "Expired.")
+	assert.Contains(t, html, "Your session has expired.")
 	assert.Equal(t, "Headscale", r.Name())
 }
 
@@ -415,9 +459,9 @@ func TestLayoutOverride(t *testing.T) {
 
 	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
 
-	html := mustRender(t)(r.AuthError(AuthErrorResult{Title: "Error", Heading: "Gone", Message: "Expired."}))
+	html := mustRender(t)(r.AuthError(AuthErrorResult{Code: 410}))
 	assert.True(t, strings.HasPrefix(html, `<!DOCTYPE html><title>Error - Headscale</title><div class="brand">`), html)
-	assert.Contains(t, html, "Expired.")
+	assert.Contains(t, html, "Your session has expired.")
 }
 
 func TestTemplateErrors(t *testing.T) {

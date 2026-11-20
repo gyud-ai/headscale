@@ -85,6 +85,19 @@ func commentAbove(out, line string) string {
 // TestGenerateExample: the example of Default() loads back to it, has every
 // key in ConfigTree order and is the same on every run; with docs, each
 // key's documentation is above it in lines of at most 80 columns.
+// isStringKey reports whether line is one key with a string value.
+func isStringKey(line string) bool {
+	var n yaml.Node
+	if yaml.Unmarshal([]byte(strings.TrimSpace(line)), &n) != nil || len(n.Content) != 1 {
+		return false
+	}
+
+	m := n.Content[0]
+
+	return m.Kind == yaml.MappingNode && len(m.Content) == 2 &&
+		m.Content[1].Kind == yaml.ScalarNode && m.Content[1].Tag == "!!str"
+}
+
 func TestGenerateExample(t *testing.T) {
 	d := Default()
 
@@ -128,7 +141,9 @@ func TestGenerateExample(t *testing.T) {
 			for l := range strings.SplitSeq(strings.TrimSuffix(text, "\n"), "\n") {
 				assert.Equal(t, strings.TrimRight(l, " \t"), l, "trailing whitespace")
 
-				if utf8.RuneCountInString(l) > 80 {
+				// The encoder doesn't wrap, so a long string value (such as
+				// a web.text default) keeps its line.
+				if utf8.RuneCountInString(l) > 80 && !isStringKey(l) {
 					assert.Len(t, strings.Fields(strings.TrimPrefix(strings.TrimSpace(l), "#")), 1, "longer than 80 columns: %q", l)
 				}
 			}

@@ -817,6 +817,27 @@ func TestDecodeErrors(t *testing.T) {
 		assert.Contains(t, got[2], "web.theme.footer_text contains a Unicode control that reorders text")
 	})
 
+	t.Run("web text", func(t *testing.T) {
+		_, err := decodeInput(t, "config.yaml", "web:\n  text:\n    auth_error:\n      title: \"\"\n      expired:\n        heading: \"Hello {user}\"\n        message: \"   \"\n    auth_success:\n      ssh:\n        verb: |\n          Approved\n")
+		require.Error(t, err)
+
+		got := reasons(types.ConfigErrors(err))
+		require.Len(t, got, 4, "%v", got)
+		assert.Contains(t, got[0], "web.text.auth_success.ssh.verb contains a control character")
+		assert.Contains(t, got[1], "web.text.auth_error.title is blank")
+		assert.Contains(t, got[2], "web.text.auth_error.expired.heading has an unknown placeholder")
+		assert.Contains(t, got[3], "web.text.auth_error.expired.message is blank")
+
+		cfg, err := decodeInput(t, "config.yaml", "web:\n  text:\n    auth_error:\n      expired:\n        heading: \"Too slow for {name}\"\n",
+			"HEADSCALE_WEB_TEXT_AUTH_SUCCESS_SSH_VERB=Approved")
+		require.NoError(t, err)
+
+		want := types.DefaultWebText()
+		want.AuthError.Expired.Heading = "Too slow for {name}"
+		want.AuthSuccess.SSH.Verb = "Approved"
+		assert.Equal(t, want, cfg.Web.Text)
+	})
+
 	for name, tt := range map[string]struct {
 		file string
 		env  []string

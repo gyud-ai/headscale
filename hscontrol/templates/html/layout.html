@@ -31,7 +31,7 @@
 </head>
 <body translate="no">
 <main class="md-typeset">
-{{block "header" .}}{{with .Site.Logo}}<img class="headscale-logo" src="{{.}}" alt="{{$.Site.Name}}">{{end}}{{end}}
+{{block "header" .}}{{template "logo" .}}{{end}}
 {{block "content" .}}{{end}}
 {{block "footer" .}}<footer class="hs-footer">
 {{- with .Site.FooterText}}<p>{{.}}</p>{{end -}}

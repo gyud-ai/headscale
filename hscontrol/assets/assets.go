@@ -5,8 +5,9 @@ package assets
 import "embed"
 
 // Static is the built-in /static/ tree: style.css, the stylesheet every
-// built-in page links; headscale.svg, the default logo; and favicon.png,
-// also served at /favicon.ico.
+// built-in page links; headscale.svg, the default logo, and
+// headscale-dark.svg, its version for a dark colour scheme; and
+// favicon.png, also served at /favicon.ico.
 //
-//go:embed favicon.png headscale.svg style.css
+//go:embed favicon.png headscale.svg headscale-dark.svg style.css
 var Static embed.FS

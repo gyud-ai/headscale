@@ -24,6 +24,7 @@ web:
   theme:
     name: "Example VPN"
     logo: "https://cdn.example.com/example-vpn.svg"
+    logo_dark: "https://cdn.example.com/example-vpn-dark.svg"
     primary_color: "#0a7d5a"
     primary_color_dark: "#4fd1a5"
     footer_text: "Operated by the Example IT team"
@@ -32,9 +33,15 @@ web:
 
 - `name` replaces "Headscale" in page titles, page text, and the display name and download file name of the Apple
   configuration profile (`example_vpn_macos.mobileconfig` for "Example VPN").
-- `logo` is the image at the top of every page. Set it to `""` to show no logo.
-- `primary_color` colours links, buttons and focus rings; on hover they take a lighter mix of it. `primary_color_dark`
-  replaces it when the browser asks for a dark colour scheme; without it, `primary_color` is used for both.
+- `logo` is the image at the top of every page. Set it to `""` to show no logo. `logo_dark` replaces it when the browser
+  asks for a dark colour scheme; without it, `logo` is used for both. The built-in logo has a built-in dark version, so
+  `logo_dark` matters only for a logo of your own. Use two files rather than an SVG with its own
+  `prefers-color-scheme` rule: shown as an image, it can pick its colour scheme apart from the page.
+- `primary_color` colours links, buttons and focus rings. `primary_color_dark` replaces it when the browser asks for a
+  dark colour scheme; without it, `primary_color` is used for both. The text on buttons is black or white, whichever
+  contrasts more with the colour (always at least the 4.5:1 [WCAG](https://www.w3.org/TR/WCAG22/#contrast-minimum)
+  asks for text). On hover, links and buttons take a mix of the colour towards the other one, so the button text
+  contrasts more on hover, not less. A colour with an alpha channel is judged as if opaque.
 - `footer_text` is a line of plain text at the bottom of every page. `hide_powered_by` removes the "Powered by
   Headscale" link below it, and the "Getting started" links to the headscale and Tailscale documentation on the login
   success page.
@@ -89,11 +96,12 @@ fonts, and `font_family` and `code_font_family` choose them:
 
 `static_dir` is a directory served under `/static/`. A file named like a built-in one replaces it:
 
-| File            | Built-in use                                          |
-| --------------- | ----------------------------------------------------- |
-| `style.css`     | The stylesheet of every page                          |
-| `headscale.svg` | The default `logo`                                    |
-| `favicon.png`   | The icon of every page, also served at `/favicon.ico` |
+| File                 | Built-in use                                          |
+| -------------------- | ----------------------------------------------------- |
+| `style.css`          | The stylesheet of every page                          |
+| `headscale.svg`      | The default `logo`                                    |
+| `headscale-dark.svg` | The default `logo` in a dark colour scheme            |
+| `favicon.png`        | The icon of every page, also served at `/favicon.ico` |
 
 Any other file is served as is, for example a logo, a stylesheet or fonts. Files are read on each request, so a change
 needs no restart. Directories are not listed, files whose name starts with a dot are not served, and symbolic links may
@@ -137,7 +145,7 @@ Colours, with the light and the dark default (`prefers-color-scheme: dark`):
 | `--md-accent-fg-color`            | `#526cfe`             | `#8fa4ff`                   | Hover colour (mixed from `theme.primary_color`) |
 | `--md-typeset-a-color`            | primary colour        | primary colour              | Links                                           |
 | `--hs-focus-ring`                 | `#4051b5`             | `#7b8fdb`                   | Keyboard focus ring (`theme.primary_color`)     |
-| `--hs-on-primary`                 | `#ffffff`             | `#ffffff`                   | Text on buttons and button links                |
+| `--hs-on-primary`                 | `#ffffff`             | `#000000`                   | Button text (picked for `theme.primary_color`)  |
 | `--md-default-fg-color`           | `rgba(0, 0, 0, 0.87)` | `rgba(255, 255, 255, 0.87)` | Text                                            |
 | `--md-default-fg-color--light`    | `rgba(0, 0, 0, 0.54)` | `rgba(255, 255, 255, 0.6)`  | Headings, footer, table labels                  |
 | `--md-default-fg-color--lighter`  | `rgba(0, 0, 0, 0.32)` | `rgba(255, 255, 255, 0.38)` | Not used by the built-in pages                  |
@@ -195,6 +203,43 @@ Sizes, the same in light and dark:
 
 The `768px` breakpoint stays in the rule: CSS does not allow variables in a media query.
 
+### One colour scheme
+
+The built-in stylesheet has a light and a dark set of colours. For one look in both, set the colours in `:root` outside
+any `@media (prefers-color-scheme: dark)` rule: a stylesheet in `theme.stylesheets` comes later, so its values win over
+the built-in light and dark ones alike. A colour you leave out keeps its built-in light and dark values. In the
+`theme`, set `primary_color` without `primary_color_dark`, and `logo` without `logo_dark`.
+
+```yaml title="config.yaml"
+web:
+  static_dir: /etc/headscale/web/static
+  theme:
+    logo: "/static/headscale-dark.svg" # the built-in logo for dark backgrounds, in both schemes
+    primary_color: "#cba6f7"
+    stylesheets:
+      - "/static/dark.css"
+```
+
+```css title="dark.css"
+/* Always dark, whatever the browser asks for */
+:root {
+  color-scheme: dark; /* scrollbars and form controls */
+  --hs-bg: #1e1e2e;
+  --hs-border: #45475a;
+  --md-default-fg-color: #cdd6f4;
+  --md-default-fg-color--light: #bac2de;
+  --md-code-fg-color: #cdd6f4;
+  --md-code-bg-color: #181825;
+  --hs-success: #a6e3a1;
+  --hs-success-bg: #1f3329;
+  --hs-error: #f38ba8;
+  --hs-error-bg: #3b2030;
+  --hs-warning-text: #f9e2af;
+  --hs-warning-bg: #3a3226;
+  --hs-warning-border: #fab387;
+}
+```
+
 !!! warning "Reverse proxy"
 
     Pages link `/static/` and `/favicon.ico` on the headscale server. A [reverse proxy](integration/reverse-proxy.md)
@@ -220,7 +265,7 @@ headscale generate web /etc/headscale/web
 | File                     | Page                                                                                   |
 | ------------------------ | -------------------------------------------------------------------------------------- |
 | `layout.html`            | The frame of every page but `blank.html`, with the blocks below                        |
-| `components.html`        | The icons the pages share                                                              |
+| `components.html`        | The logo and the icons the pages share                                                 |
 | `apple.html`             | `/apple`, setting up iOS, macOS and tvOS                                               |
 | `windows.html`           | `/windows`, setting up Windows                                                         |
 | `auth_web.html`          | `/register/<id>` and `/auth/<id>` without OpenID Connect: the command that approves it |
@@ -240,7 +285,7 @@ there to replace it on every page, and keep the rest of the built-in layout:
 | ----------------- | ---------------------------------------------------------------------------- |
 | `title`           | The page title; each page sets it                                            |
 | `head`            | Empty; extra tags at the end of `<head>`                                     |
-| `header`          | The logo                                                                     |
+| `header`          | The logo: the `logo` component, a `<picture>` when there is a dark logo      |
 | `content`         | The page itself; each page sets it                                           |
 | `footer`          | `footer_text` and the "Powered by Headscale" link                            |
 | `getting_started` | The documentation links on `auth_success.html`; empty with `hide_powered_by` |
@@ -286,16 +331,17 @@ whole document. A landing page at `/`:
 Every template gets the theme as `.Site` and the page's own data as `.Page`. Values are escaped for where they appear,
 as `html/template` does: a hostname a device reports cannot add markup to the page.
 
-| `.Site` field                      | Value                                                            |
-| ---------------------------------- | ---------------------------------------------------------------- |
-| `Name`, `Logo`, `FooterText`       | `theme.name`, `theme.logo`, `theme.footer_text`                  |
-| `HidePoweredBy`                    | `theme.hide_powered_by`                                          |
-| `ServerURL`                        | `server_url`                                                     |
-| `PrimaryColor`, `PrimaryColorDark` | `theme.primary_color`, `theme.primary_color_dark`                |
-| `FontFamily`, `CodeFontFamily`     | `theme.font_family`, `theme.code_font_family`                    |
-| `FontStylesheets`, `Stylesheets`   | `theme.font_stylesheets`, `theme.stylesheets`, lists of URLs     |
-| `ThemeCSS`                         | The CSS variables the colours and fonts above set, for `<style>` |
-| `ProfileFileName`                  | The download name of the Apple profiles, from `theme.name`       |
+| `.Site` field                      | Value                                                                                           |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `Name`, `Logo`, `FooterText`       | `theme.name`, `theme.logo`, `theme.footer_text`                                                 |
+| `LogoDark`                         | `theme.logo_dark`, or the built-in dark logo with the built-in `logo`; URL-encoded for `srcset` |
+| `HidePoweredBy`                    | `theme.hide_powered_by`                                                                         |
+| `ServerURL`                        | `server_url`                                                                                    |
+| `PrimaryColor`, `PrimaryColorDark` | `theme.primary_color`, `theme.primary_color_dark`                                               |
+| `FontFamily`, `CodeFontFamily`     | `theme.font_family`, `theme.code_font_family`                                                   |
+| `FontStylesheets`, `Stylesheets`   | `theme.font_stylesheets`, `theme.stylesheets`, lists of URLs                                    |
+| `ThemeCSS`                         | The CSS variables the colours and fonts above set, for `<style>`                                |
+| `ProfileFileName`                  | The download name of the Apple profiles, from `theme.name`                                      |
 
 | Page                                       | `.Page` fields                                                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |

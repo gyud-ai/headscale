@@ -140,6 +140,7 @@ var configFieldDocs = map[string]string{
 	"WebThemeConfig.FooterText":                           "A line of plain text shown at the bottom of every page, above the \"Powered by Headscale\" link.",
 	"WebThemeConfig.HidePoweredBy":                        "Removes the \"Powered by Headscale\" link from the footer.",
 	"WebThemeConfig.Logo":                                 "The image at the top of every page: an `http://` or `https://` URL, or a path on this server such as a file in `web.static_dir`. Empty shows no logo.",
+	"WebThemeConfig.LogoDark":                             "Replaces `web.theme.logo` when the browser asks for a dark colour scheme, as `web.theme.primary_color_dark` does for the colour. Needs `web.theme.logo`. Empty uses `web.theme.logo` for both, except that the built-in logo has a built-in dark version.",
 	"WebThemeConfig.Name":                                 "The product name in page titles, page text, the footer and the Apple configuration profile.",
 	"WebThemeConfig.PrimaryColor":                         "The colour of links, buttons and focus rings, as `#rrggbb`. Empty keeps the built-in blue.",
 	"WebThemeConfig.PrimaryColorDark":                     "Replaces `web.theme.primary_color` when the browser asks for a dark colour scheme. Empty uses `web.theme.primary_color`.",

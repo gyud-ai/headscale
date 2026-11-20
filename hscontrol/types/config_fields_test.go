@@ -137,6 +137,7 @@ func TestConfigFields(t *testing.T) {
 		"web.static_dir",
 		"web.theme.name",
 		"web.theme.logo",
+		"web.theme.logo_dark",
 		"web.theme.primary_color",
 		"web.theme.primary_color_dark",
 		"web.theme.font_stylesheets",

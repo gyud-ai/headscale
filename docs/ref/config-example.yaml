@@ -418,6 +418,60 @@ auto_update:
   # clients.
   enabled: false
 
+# The look of the pages headscale serves to browsers: the client setup pages,
+# the registration and OpenID Connect login pages, and `/`. See
+# [Branding](https://headscale.net/stable/ref/branding/).
+web:
+  # A directory of Go html/template files, relative to the configuration file. A
+  # file named like a built-in template, such as `layout.html` or `apple.html`,
+  # replaces it; any other `.html` file is loaded into every page, where it can
+  # redefine a block of the layout. Read at startup and again on SIGHUP. Empty
+  # uses the built-in templates.
+  templates_dir: ""
+  # A directory served under `/static/`, relative to the configuration file. A
+  # file named like a built-in one, such as `style.css`, `headscale.svg` or
+  # `favicon.png`, replaces it. Files are read on each request. Empty serves
+  # only the built-in files.
+  static_dir: ""
+  # The name, logo, colours and fonts of the pages, set without writing
+  # templates.
+  theme:
+    # The product name in page titles, page text, the footer and the Apple
+    # configuration profile.
+    name: Headscale
+    # The image at the top of every page: an `http://` or `https://` URL, or a
+    # path on this server such as a file in `web.static_dir`. Empty shows no
+    # logo.
+    logo: /static/headscale.svg
+    # The colour of links, buttons and focus rings, as `#rrggbb`. Empty keeps
+    # the built-in blue.
+    primary_color: ""
+    # Replaces `web.theme.primary_color` when the browser asks for a dark colour
+    # scheme. Empty uses `web.theme.primary_color`.
+    primary_color_dark: ""
+    # The stylesheets that load the fonts, before the page's own styles. The
+    # default loads Roboto and Roboto Mono from Google Fonts; `[]` loads none,
+    # and the pages fall back to system fonts unless `web.theme.font_family`
+    # names fonts the browser has.
+    font_stylesheets:
+      - https://fonts.googleapis.com/css2?family=Roboto:wght@300..700
+      - https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap
+    # The CSS font list for text, as in `"Inter", sans-serif`. Empty uses
+    # Roboto, then system fonts.
+    font_family: ""
+    # The CSS font list for commands and code. Empty uses Roboto Mono, then
+    # system monospace fonts.
+    code_font_family: ""
+    # Extra stylesheets loaded after the built-in one, so their rules win: an
+    # `http://` or `https://` URL, or a path on this server such as a file in
+    # `web.static_dir`.
+    stylesheets: []
+    # A line of plain text shown at the bottom of every page, above the "Powered
+    # by Headscale" link.
+    footer_text: ""
+    # Removes the "Powered by Headscale" link from the footer.
+    hide_powered_by: false
+
 # How the headscale CLI reaches the server: the local `unix_socket` without
 # authentication, or a remote `cli.address` with `cli.api_key`. The CLI reads
 # these keys from its own configuration, such as

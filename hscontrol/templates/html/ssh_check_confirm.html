@@ -1,0 +1,26 @@
+{{- /*
+  ssh_check_confirm asks the owner to approve an SSH session that a
+  policy "check" rule holds. .Page has Source and Destination, the node
+  names, and the fields of register_confirm.html; Hostname, OS,
+  MachineKey, ExistingNode and Tags are empty.
+
+  A custom version must keep the form: a POST to .Page.FormAction with a
+  hidden input named .Page.CSRFTokenName holding .Page.CSRFToken.
+*/ -}}
+{{template "layout" .}}
+{{- define "title"}}Confirm SSH session - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<h2>Confirm SSH session</h2>
+<p>An SSH session is waiting for your approval. Review the source and destination nodes before continuing.</p>
+<table class="hs-device-table">
+<tr><td>From</td><td>{{.Page.Source}}</td></tr>
+<tr><td>To</td><td>{{.Page.Destination}}</td></tr>
+<tr><td>Approved by</td><td>{{.Page.User}}</td></tr>
+</table>
+<p>Approval also allows new SSH sessions between these two nodes without asking again until the check period ends.</p>
+<form method="POST" action="{{.Page.FormAction}}">
+<input type="hidden" name="{{.Page.CSRFTokenName}}" value="{{.Page.CSRFToken}}">
+<button type="submit">Approve SSH session</button>
+</form>
+<p>If you do not recognise this request, close this window. The request will expire automatically.</p>
+{{- end}}

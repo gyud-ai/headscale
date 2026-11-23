@@ -42,6 +42,7 @@ func TestFiles(t *testing.T) {
 		},
 		DNSConfig: types.DNSConfig{ExtraRecordsPath: "records.json"},
 		TLS:       types.TLSConfig{CertPath: "c.pem", KeyPath: "k.pem"},
+		Web:       types.WebConfig{TemplatesDir: "web/templates", StaticDir: filepath.Join(dir, "static")},
 	}
 
 	type entry struct {
@@ -62,6 +63,8 @@ func TestFiles(t *testing.T) {
 		{"derp.paths", "b.yaml", false},
 		{"dns.extra_records_path", "records.json", false},
 		{"tls.cert_path, tls.key_path", "c.pem, k.pem", false},
+		{"web.templates_dir", "web/templates", false},
+		{"web.static_dir", filepath.Join(dir, "static"), false},
 		{"noise.private_key_path", filepath.Join(dir, "noise.key"), true},
 		{"derp.server.private_key_path", filepath.Join(dir, "derp.key"), true},
 	}

@@ -1,0 +1,43 @@
+{{- /*
+  layout is the frame of every built-in page except blank.html. A page
+  calls {{template "layout" .}} and defines the blocks it fills: "title"
+  and "content", and optionally "head" for extra tags in <head>. Override
+  a single block for every page by defining it in any other .html file in
+  web.templates_dir, e.g. {{define "footer"}}...{{end}}.
+
+  Every template gets .Site (the theme, see the docs) and .Page (the
+  page's own data).
+*/ -}}
+{{- define "layout" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{block "title" .}}{{.Site.Name}}{{end}}</title>
+<link rel="icon" href="/favicon.ico">
+{{- range .Site.FontStylesheets}}
+<link rel="stylesheet" href="{{.}}">
+{{- end}}
+<link rel="stylesheet" href="/static/style.css">
+{{- with .Site.ThemeCSS}}
+<style>{{.}}</style>
+{{- end}}
+{{- range .Site.Stylesheets}}
+<link rel="stylesheet" href="{{.}}">
+{{- end}}
+{{- block "head" .}}{{end}}
+</head>
+<body translate="no">
+<main class="md-typeset">
+{{block "header" .}}{{with .Site.Logo}}<img class="headscale-logo" src="{{.}}" alt="{{$.Site.Name}}">{{end}}{{end}}
+{{block "content" .}}{{end}}
+{{block "footer" .}}<footer class="hs-footer">
+{{- with .Site.FooterText}}<p>{{.}}</p>{{end -}}
+{{- if not .Site.HidePoweredBy}}<p>Powered by <a href="https://github.com/juanfont/headscale" rel="noreferrer noopener" target="_blank">Headscale</a></p>{{end -}}
+</footer>{{end}}
+</main>
+</body>
+</html>
+{{end -}}

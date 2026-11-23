@@ -1,24 +1,12 @@
-// Package assets provides embedded static assets for Headscale.
-// All static files (favicon, CSS, SVG) are embedded here for
-// centralized asset management.
+// Package assets holds the built-in static files of headscale's web pages,
+// served under /static/ and replaceable by file name from web.static_dir.
 package assets
 
-import (
-	_ "embed"
-)
+import "embed"
 
-// Favicon is the embedded favicon.png file served at /favicon.ico
+// Static is the built-in /static/ tree: style.css, the stylesheet every
+// built-in page links; headscale.svg, the default logo; and favicon.png,
+// also served at /favicon.ico.
 //
-//go:embed favicon.png
-var Favicon []byte
-
-// CSS is the embedded style.css stylesheet used in HTML templates.
-// Contains Material for MkDocs design system styles.
-//
-//go:embed style.css
-var CSS string
-
-// SVG is the embedded headscale.svg logo used in HTML templates.
-//
-//go:embed headscale.svg
-var SVG string
+//go:embed favicon.png headscale.svg style.css
+var Static embed.FS

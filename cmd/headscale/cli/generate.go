@@ -4,11 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	clientv1 "github.com/juanfont/headscale/gen/client/v1"
 
+	"github.com/juanfont/headscale/hscontrol/assets"
 	"github.com/juanfont/headscale/hscontrol/config"
+	"github.com/juanfont/headscale/hscontrol/templates"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/spf13/cobra"
 	"tailscale.com/types/key"
@@ -26,9 +32,13 @@ func init() {
 
 	generateNixOSOptionsCmd.Flags().Bool("release", false, "Stamp the version and commit of this binary, which must be a clean build of a known commit")
 	generateCmd.AddCommand(generateNixOSOptionsCmd)
+	generateCmd.AddCommand(generateWebCmd)
 }
 
-var errNotRelease = errors.New("--release needs a binary built from a clean, known commit")
+var (
+	errNotRelease = errors.New("--release needs a binary built from a clean, known commit")
+	errWebExists  = errors.New("already exists; nothing was written")
+)
 
 var generateCmd = &cobra.Command{
 	Use:     "generate",
@@ -166,4 +176,88 @@ func releaseStamp(v *types.VersionInfo) (*types.VersionInfo, error) {
 	}
 
 	return v, nil
+}
+
+var generateWebCmd = &cobra.Command{
+	Use:   "web <dir>",
+	Short: "Write the built-in web page templates and static files to a directory",
+	Long: `Write the built-in templates of headscale's web pages to <dir>/templates
+and its static files to <dir>/static, the starting point for
+web.templates_dir and web.static_dir. They match this version of headscale.
+
+Keep only the files you change: a file left in place replaces the built-in
+one, so it stops following upgrades. Nothing is written if any of the files
+already exists.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return writeWebFiles(cmd.OutOrStdout(), args[0])
+	},
+}
+
+// writeWebFiles copies the built-in templates and static files below dir,
+// naming each file it writes on out. It refuses before writing anything
+// if a file is already there.
+func writeWebFiles(out io.Writer, dir string) error {
+	type file struct {
+		path string
+		data []byte
+	}
+
+	var files []file
+
+	for _, src := range []struct {
+		sub  string
+		fsys fs.FS
+	}{
+		{"templates", templates.Builtin()},
+		{"static", assets.Static},
+	} {
+		err := fs.WalkDir(src.fsys, ".", func(name string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+
+			data, err := fs.ReadFile(src.fsys, name)
+			if err != nil {
+				return err
+			}
+
+			files = append(files, file{filepath.Join(dir, src.sub, filepath.FromSlash(name)), data})
+
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, f := range files {
+		_, err := os.Lstat(f.path)
+		if err == nil {
+			return fmt.Errorf("%s %w", f.path, errWebExists)
+		}
+
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+
+	for _, f := range files {
+		err := os.MkdirAll(filepath.Dir(f.path), 0o755) //nolint:mnd // a directory others may read
+		if err != nil {
+			return err
+		}
+
+		err = os.WriteFile(f.path, f.data, 0o644) //nolint:gosec,mnd // templates and assets are public
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintln(out, f.path)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

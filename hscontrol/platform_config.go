@@ -8,7 +8,6 @@ import (
 	"uuid"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/juanfont/headscale/hscontrol/templates"
 )
 
 // WindowsConfigMessage shows a simple message in the browser for how to configure the Windows Tailscale client.
@@ -16,9 +15,7 @@ func (h *Headscale) WindowsConfigMessage(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte(templates.Windows(h.cfg.ServerURL).Render()))
+	writePage(writer, http.StatusOK)(h.pages.Windows())
 }
 
 // AppleConfigMessage shows a simple message in the browser to point the user to the iOS/MacOS profile and instructions for how to install it.
@@ -26,9 +23,7 @@ func (h *Headscale) AppleConfigMessage(
 	writer http.ResponseWriter,
 	req *http.Request,
 ) {
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte(templates.Apple(h.cfg.ServerURL).Render()))
+	writePage(writer, http.StatusOK)(h.pages.Apple())
 }
 
 func (h *Headscale) ApplePlatformConfig(
@@ -66,6 +61,7 @@ func (h *Headscale) ApplePlatformConfig(
 	config := AppleMobileConfig{
 		UUID:    id,
 		URL:     h.cfg.ServerURL,
+		Name:    h.pages.Name(),
 		Payload: payload.String(),
 	}
 
@@ -82,8 +78,10 @@ func (h *Headscale) ApplePlatformConfig(
 }
 
 type AppleMobileConfig struct {
-	UUID    uuid.UUID
-	URL     string
+	UUID uuid.UUID
+	URL  string
+	// Name is the profile's display name, web.theme.name.
+	Name    string
 	Payload string
 }
 
@@ -109,7 +107,7 @@ var commonTemplate = textTemplate.Must(
     <key>PayloadUUID</key>
     <string>{{.UUID}}</string>
     <key>PayloadDisplayName</key>
-    <string>Headscale</string>
+    <string>{{html .Name}}</string>
     <key>PayloadDescription</key>
     <string>Configure Tailscale login server to: {{.URL}}</string>
     <key>PayloadIdentifier</key>

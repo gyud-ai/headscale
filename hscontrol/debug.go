@@ -262,12 +262,16 @@ func (h *Headscale) debugHTTPServer() *http.Server {
 			}
 		}
 
-		nodes := h.connectedNodesList()
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(templates.PingPage(query, result, nodes).Render())) //nolint:gosec // G705: templ component auto-escapes
+		writePage(w, http.StatusOK)(h.pages.Ping(templates.PingData{
+			Query:  query,
+			Result: result,
+			Nodes:  h.connectedNodesList(),
+		}))
 	}))
+
+	// The ping page links the built-in stylesheet and logo.
+	debugMux.Handle(templates.StaticPrefix, h.pages.StaticHandler())
+	debugMux.HandleFunc("/favicon.ico", h.pages.ServeFavicon)
 
 	// [statsviz.Register] would mount handlers directly on the raw mux,
 	// bypassing the access gate. Build the server by hand and wrap

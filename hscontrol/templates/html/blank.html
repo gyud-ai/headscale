@@ -1,0 +1,14 @@
+{{- /*
+  blank is /: an empty page that only sets the favicon. Replace it, for
+  instance with {{template "layout" .}} and a "content" block, to give the
+  server a landing page. .Page is empty.
+*/ -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{.Site.Name}}</title>
+<link rel="icon" href="/favicon.ico">
+</head>
+<body></body>
+</html>

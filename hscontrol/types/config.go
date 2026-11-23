@@ -247,6 +247,11 @@ type Config struct { //nolint:recvcheck // MarshalJSON reads a value, so a Confi
 	// AutoUpdate is the tailnet-wide default for client auto-updates.
 	AutoUpdate AutoUpdateConfig `koanf:"auto_update"`
 
+	// Web is the look of the pages headscale serves to browsers: the
+	// client setup pages, the registration and OpenID Connect login pages,
+	// and `/`. See [Branding](https://headscale.net/stable/ref/branding/).
+	Web WebConfig `koanf:"web"`
+
 	// CLI is how the headscale CLI reaches the server: the local
 	// `unix_socket` without authentication, or a remote `cli.address`
 	// with `cli.api_key`. The CLI reads these keys from its own
@@ -854,6 +859,88 @@ type AutoUpdateConfig struct {
 	// chosen locally. Clients store the default they first see, so a
 	// later change reaches only new clients.
 	Enabled bool `koanf:"enabled"`
+}
+
+// WebConfig is the look of the pages headscale serves to browsers.
+type WebConfig struct {
+	// TemplatesDir is a directory of Go html/template files, relative to
+	// the configuration file. A file named like a built-in template, such
+	// as `layout.html` or `apple.html`, replaces it; any other `.html` file
+	// is loaded into every page, where it can redefine a block of the
+	// layout. Read at startup and again on SIGHUP. Empty uses the built-in
+	// templates.
+	TemplatesDir string `example:"\"/etc/headscale/web/templates\"" koanf:"templates_dir" nix:"path"`
+
+	// StaticDir is a directory served under `/static/`, relative to the
+	// configuration file. A file named like a built-in one, such as
+	// `style.css`, `headscale.svg` or `favicon.png`, replaces it. Files are
+	// read on each request. Empty serves only the built-in files.
+	StaticDir string `example:"\"/etc/headscale/web/static\"" koanf:"static_dir" nix:"path"`
+
+	// Theme is the name, logo, colours and fonts of the pages, set without
+	// writing templates.
+	Theme WebThemeConfig `koanf:"theme"`
+}
+
+// WebThemeConfig is the branding the built-in templates read; custom
+// templates see it too.
+type WebThemeConfig struct {
+	// Name is the product name in page titles, page text, the footer and
+	// the Apple configuration profile.
+	Name string `example:"\"Example VPN\"" koanf:"name"`
+
+	// Logo is the image at the top of every page: an `http://` or
+	// `https://` URL, or a path on this server such as a file in
+	// `web.static_dir`. Empty shows no logo.
+	Logo WebURL `example:"\"/static/logo.svg\"" koanf:"logo"`
+
+	// PrimaryColor is the colour of links, buttons and focus rings, as
+	// `#rrggbb`. Empty keeps the built-in blue.
+	PrimaryColor CSSColor `example:"\"#0a7d5a\"" koanf:"primary_color"`
+
+	// PrimaryColorDark replaces `web.theme.primary_color` when the browser
+	// asks for a dark colour scheme. Empty uses `web.theme.primary_color`.
+	PrimaryColorDark CSSColor `example:"\"#4fd1a5\"" koanf:"primary_color_dark"`
+
+	// FontStylesheets are the stylesheets that load the fonts, before the
+	// page's own styles. The default loads Roboto and Roboto Mono from
+	// Google Fonts; `[]` loads none, and the pages fall back to system
+	// fonts unless `web.theme.font_family` names fonts the browser has.
+	FontStylesheets []WebURL `example:"[\"/static/fonts/inter.css\"]" koanf:"font_stylesheets"`
+
+	// FontFamily is the CSS font list for text, as in
+	// `"Inter", sans-serif`. Empty uses Roboto, then system fonts.
+	FontFamily FontFamily `example:"\"\\\"Inter\\\", sans-serif\"" koanf:"font_family"`
+
+	// CodeFontFamily is the CSS font list for commands and code. Empty
+	// uses Roboto Mono, then system monospace fonts.
+	CodeFontFamily FontFamily `example:"\"\\\"JetBrains Mono\\\", monospace\"" koanf:"code_font_family"`
+
+	// Stylesheets are extra stylesheets loaded after the built-in one, so
+	// their rules win: an `http://` or `https://` URL, or a path on this
+	// server such as a file in `web.static_dir`.
+	Stylesheets []WebURL `example:"[\"/static/brand.css\"]" koanf:"stylesheets"`
+
+	// FooterText is a line of plain text shown at the bottom of every
+	// page, above the "Powered by Headscale" link.
+	FooterText string `example:"\"Operated by the Example IT team\"" koanf:"footer_text"`
+
+	// HidePoweredBy removes the "Powered by Headscale" link from the
+	// footer.
+	HidePoweredBy bool `koanf:"hide_powered_by"`
+}
+
+// DefaultWebTheme is the theme of the built-in pages: the headscale name
+// and logo, and Roboto from Google Fonts.
+func DefaultWebTheme() WebThemeConfig {
+	return WebThemeConfig{
+		Name: "Headscale",
+		Logo: "/static/headscale.svg",
+		FontStylesheets: []WebURL{
+			"https://fonts.googleapis.com/css2?family=Roboto:wght@300..700",
+			"https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
+		},
+	}
 }
 
 // CLIConfig is how the headscale CLI reaches the server: the local

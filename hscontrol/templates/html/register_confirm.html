@@ -1,0 +1,33 @@
+{{- /*
+  register_confirm asks the user who just logged in through OpenID
+  Connect to confirm that the device is theirs before it is registered.
+  .Page has FormAction, CSRFTokenName, CSRFToken, User, Hostname, OS,
+  MachineKey, ExistingNode and Tags. Hostname, OS and Tags come from the
+  device itself.
+
+  A custom version must keep the form: a POST to .Page.FormAction with a
+  hidden input named .Page.CSRFTokenName holding .Page.CSRFToken.
+*/ -}}
+{{template "layout" .}}
+{{- define "title"}}Confirm node registration - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<h2>Confirm node registration</h2>
+<p>A device is asking to be added to your tailnet. Please review the details below and confirm that this device is yours.</p>
+<table class="hs-device-table">
+<tr><td>Hostname</td><td>{{.Page.Hostname}}</td></tr>
+<tr><td>OS</td><td>{{or .Page.OS "(unknown)"}}</td></tr>
+<tr><td>Machine key</td><td><code>{{.Page.MachineKey}}</code></td></tr>
+<tr><td>Existing node</td><td>{{or .Page.ExistingNode "None, this is a new device"}}</td></tr>
+{{- if .Page.Tags}}
+<tr><td>Registered to</td><td>{{join .Page.Tags ", "}}</td></tr>
+<tr><td>Approved by</td><td>{{.Page.User}}</td></tr>
+{{- else}}
+<tr><td>Registered to</td><td>{{.Page.User}}</td></tr>
+{{- end}}
+</table>
+<form method="POST" action="{{.Page.FormAction}}">
+<input type="hidden" name="{{.Page.CSRFTokenName}}" value="{{.Page.CSRFToken}}">
+<button type="submit">Confirm registration</button>
+</form>
+<p>If you do not recognise this device, close this window. The registration request will expire automatically.</p>
+{{- end}}

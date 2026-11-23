@@ -1,0 +1,9 @@
+{{- /* windows is /windows: setting up the Windows client. .Page is empty; the server URL is .Site.ServerURL. */ -}}
+{{template "layout" .}}
+{{- define "title"}}Windows - {{.Site.Name}}{{end}}
+{{- define "content"}}
+<h1>Windows configuration</h1>
+<p>Download <a href="https://tailscale.com/download/windows" rel="noreferrer noopener" target="_blank">Tailscale for Windows</a> and install it.</p>
+<p>Open a Command Prompt or PowerShell and use Tailscale's login command to connect with {{.Site.Name}}:</p>
+<pre><code>tailscale login --login-server {{.Site.ServerURL}}</code></pre>
+{{- end}}

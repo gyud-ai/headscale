@@ -322,7 +322,7 @@ func TestHttpUserError(t *testing.T) {
 			t.Parallel()
 
 			rec := httptest.NewRecorder()
-			httpUserError(rec, tt.err)
+			httpUserError(rec, nil, tt.err)
 
 			assert.Equal(t, tt.wantCode, rec.Code)
 			assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")

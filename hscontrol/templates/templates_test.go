@@ -5,10 +5,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/juanfont/headscale/hscontrol/assets"
 	"github.com/juanfont/headscale/hscontrol/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,8 +58,8 @@ func mustRender(t *testing.T) func([]byte, error) string {
 	}
 }
 
-// TestBuiltinPages renders every page as headscale does and checks the
-// markup that clients and tests parse.
+// TestBuiltinPages renders each page the way headscale does and checks the
+// markup that clients and tests read.
 func TestBuiltinPages(t *testing.T) {
 	r := newTestRenderer(t, types.WebConfig{})
 
@@ -531,6 +533,45 @@ func TestStaticBuiltin(t *testing.T) {
 	r.ServeFavicon(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/favicon.ico", nil))
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
+}
+
+// TestStyleVariables checks that every variable style.css reads, and every
+// one the theme sets, is declared in style.css. A misspelt name in var()
+// drops the whole declaration without an error in the browser.
+func TestStyleVariables(t *testing.T) {
+	b, err := assets.Static.ReadFile("style.css")
+	require.NoError(t, err)
+
+	css := string(b)
+
+	declared := map[string]bool{}
+	for _, m := range regexp.MustCompile(`(--[\w-]+)\s*:`).FindAllStringSubmatch(css, -1) {
+		declared[m[1]] = true
+	}
+
+	require.Contains(t, declared, "--hs-space-4")
+
+	undeclared := func(re, s string) []string {
+		var missing []string
+
+		for _, m := range regexp.MustCompile(re).FindAllStringSubmatch(s, -1) {
+			if !declared[m[1]] {
+				missing = append(missing, m[1])
+			}
+		}
+
+		return missing
+	}
+
+	assert.Empty(t, undeclared(`var\((--[\w-]+)`, css), "style.css reads undeclared variables")
+
+	theme := themeCSS(types.WebThemeConfig{
+		PrimaryColor:     "#0a7d5a",
+		PrimaryColorDark: "#4fd1a5",
+		FontFamily:       "sans-serif",
+		CodeFontFamily:   "monospace",
+	})
+	assert.Empty(t, undeclared(`(--[\w-]+):`, string(theme)), "the theme sets variables style.css does not declare")
 }
 
 func TestFaviconOverride(t *testing.T) {

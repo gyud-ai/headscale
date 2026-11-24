@@ -38,8 +38,8 @@ var (
 	errLogoDarkNoLogo = errors.New("needs web.theme.logo: the dark logo replaces it")
 )
 
-// builtinLogo and builtinLogoDark are the built-in logo's files under
-// [StaticPrefix], for a light and a dark colour scheme.
+// builtinLogo and builtinLogoDark are the files of the built-in logo under
+// [StaticPrefix]: one for a light colour scheme, one for a dark one.
 const (
 	builtinLogo     = "headscale.svg"
 	builtinLogoDark = "headscale-dark.svg"

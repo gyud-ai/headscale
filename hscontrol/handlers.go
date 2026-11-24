@@ -429,7 +429,7 @@ func (h *Headscale) NotFoundHandler(writer http.ResponseWriter, req *http.Reques
 
 // wantsPage reports whether req is a browser asking for a page: a GET or
 // HEAD outside /api whose Accept header takes text/html, as a browser's
-// navigation does. Clients and API callers do not ask for HTML.
+// navigation does. HTML is not what clients and API callers ask for.
 func wantsPage(req *http.Request) bool {
 	if req.Method != http.MethodGet && req.Method != http.MethodHead {
 		return false

@@ -61,7 +61,7 @@ type AuthErrorResult struct {
 	// Code is the HTTP status code of the response, e.g. 410.
 	Code int
 
-	// Reason is what went wrong, one of the AuthError values below.
+	// Reason says what went wrong: one of the AuthError values below.
 	// Several reasons share a code: 410 is both AuthErrorExpired and
 	// AuthErrorLinkSpent.
 	Reason string

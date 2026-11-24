@@ -58,8 +58,8 @@ func mustRender(t *testing.T) func([]byte, error) string {
 	}
 }
 
-// TestBuiltinPages renders every page as headscale does and checks the
-// markup that clients and tests parse.
+// TestBuiltinPages renders each page the way headscale does and checks the
+// markup that clients and tests read.
 func TestBuiltinPages(t *testing.T) {
 	r := newTestRenderer(t, types.WebConfig{})
 

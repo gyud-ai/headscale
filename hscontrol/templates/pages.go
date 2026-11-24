@@ -25,7 +25,7 @@ type AuthWebData struct {
 	// Kind is what the command approves: AuthWebRegister or AuthWebAuth.
 	Kind string
 
-	// AuthID is the request's auth ID, the one Command names.
+	// AuthID is the auth ID of the request: the same one Command names.
 	AuthID string
 }
 

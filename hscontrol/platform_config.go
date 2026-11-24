@@ -32,7 +32,7 @@ func (h *Headscale) ApplePlatformConfig(
 ) {
 	platform := chi.URLParam(req, "platform")
 	if platform == "" {
-		httpError(writer, NewHTTPError(http.StatusBadRequest, "no platform specified", nil))
+		h.httpErrorFor(writer, req, NewHTTPError(http.StatusBadRequest, "no platform specified", nil))
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h *Headscale) ApplePlatformConfig(
 
 	payloadType, ok := applePayloadType[platform]
 	if !ok {
-		httpError(writer, NewHTTPError(http.StatusBadRequest, "platform must be ios, macos-app-store or macos-standalone", nil))
+		h.httpErrorFor(writer, req, NewHTTPError(http.StatusBadRequest, "platform must be ios, macos-app-store or macos-standalone", nil))
 		return
 	}
 
@@ -54,7 +54,7 @@ func (h *Headscale) ApplePlatformConfig(
 
 	var payload bytes.Buffer
 	if err := payloadTemplate.Execute(&payload, platformConfig); err != nil { //nolint:noinlineerr
-		httpError(writer, err)
+		h.httpErrorFor(writer, req, err)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *Headscale) ApplePlatformConfig(
 
 	var content bytes.Buffer
 	if err := commonTemplate.Execute(&content, config); err != nil { //nolint:noinlineerr
-		httpError(writer, err)
+		h.httpErrorFor(writer, req, err)
 		return
 	}
 

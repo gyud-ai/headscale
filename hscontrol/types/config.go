@@ -880,14 +880,122 @@ type WebConfig struct {
 	// Theme is the name, logo, colours and fonts of the pages, set without
 	// writing templates.
 	Theme WebThemeConfig `koanf:"theme"`
+
+	// Text is the text headscale picks for a page, such as the heading of
+	// an error page, set without writing templates. Each value is one line
+	// of plain text, shown as written; `{name}` in it is replaced by
+	// `web.theme.name`. A blank value, control characters, more than 500
+	// characters and any other `{...}` are refused. Leave a key out to
+	// keep the built-in text.
+	Text WebTextConfig `koanf:"text"`
+}
+
+// WebTextConfig is the text of the pages, by page and case. Templates
+// get it as .Page fields; a custom template may ignore it.
+type WebTextConfig struct {
+	// AuthWeb is the page that shows an administrator the command that
+	// approves a request, when OpenID Connect is off.
+	AuthWeb WebAuthWebText `koanf:"auth_web"`
+
+	// AuthSuccess is the page shown after an OpenID Connect login.
+	AuthSuccess WebAuthSuccessText `koanf:"auth_success"`
+
+	// AuthError is the page shown when a browser step of a login fails.
+	AuthError WebAuthErrorText `koanf:"auth_error"`
+}
+
+// WebAuthWebText is the text of the auth_web page, by request.
+type WebAuthWebText struct {
+	// Register is `/register/{id}`: a new node waiting to be added.
+	Register WebCommandText `koanf:"register"`
+
+	// Auth is `/auth/{id}`: an auth request waiting for approval.
+	Auth WebCommandText `koanf:"auth"`
+}
+
+// WebCommandText is the text around the command on the auth_web page.
+type WebCommandText struct {
+	// Title is the page title and heading.
+	Title PageText `example:"\"Add a device to {name}\"" koanf:"title"`
+
+	// Description introduces the command.
+	Description PageText `example:"\"Send this command to the IT team:\"" koanf:"description"`
+}
+
+// WebAuthSuccessText is the text of the auth_success page, by what
+// succeeded.
+type WebAuthSuccessText struct {
+	// Register is a new node registered.
+	Register WebSuccessText `koanf:"register"`
+
+	// Reauth is an existing node logged in again.
+	Reauth WebSuccessText `koanf:"reauth"`
+
+	// SSH is an SSH session that a check rule held, now approved.
+	SSH WebSuccessText `koanf:"ssh"`
+}
+
+// WebSuccessText is the text of one case of the auth_success page, which
+// reads "<heading>", then "<verb> as <user>. <message>".
+type WebSuccessText struct {
+	// Title is the page title.
+	Title PageText `example:"\"Welcome\"" koanf:"title"`
+
+	// Heading is the text in the success box.
+	Heading PageText `example:"\"You are connected to {name}\"" koanf:"heading"`
+
+	// Verb is the word before "as" and the user name.
+	Verb PageText `example:"\"Signed in\"" koanf:"verb"`
+
+	// Message is the sentence after the user name.
+	Message PageText `example:"\"You can close this tab.\"" koanf:"message"`
+}
+
+// WebAuthErrorText is the text of the auth_error page, by reason. The
+// page tells the user what to do; what went wrong is in the server log.
+type WebAuthErrorText struct {
+	// Title is the page title of every error.
+	Title PageText `example:"\"Sign-in problem\"" koanf:"title"`
+
+	// Unauthorized is a 401 or 403: the user may not do this, for example
+	// a login outside `oidc.allowed_domains`.
+	Unauthorized WebErrorText `koanf:"unauthorized"`
+
+	// Expired is a 410: the login took too long and its session expired.
+	Expired WebErrorText `koanf:"expired"`
+
+	// BadRequest is another 4xx: the request could not be used, for example
+	// a login link that was cut short.
+	BadRequest WebErrorText `koanf:"bad_request"`
+
+	// ServerError is a 5xx: headscale failed or is busy.
+	ServerError WebErrorText `koanf:"server_error"`
+
+	// LinkSpent is a 410 for a registration link that was already used,
+	// usually a reload after the user confirmed.
+	LinkSpent WebErrorText `koanf:"link_spent"`
+
+	// NodeReportTooLarge is a 400 for a device whose report to headscale
+	// is over the size limit.
+	NodeReportTooLarge WebErrorText `koanf:"node_report_too_large"`
+}
+
+// WebErrorText is the text in the box of the auth_error page.
+type WebErrorText struct {
+	// Heading is the bold text in the error box.
+	Heading PageText `example:"\"Something is not right\"" koanf:"heading"`
+
+	// Message tells the user what to do next.
+	Message PageText `example:"\"Contact the IT team at it@example.com.\"" koanf:"message"`
 }
 
 // WebThemeConfig is the branding the built-in templates read; custom
 // templates see it too.
 type WebThemeConfig struct {
 	// Name is the product name in page titles, page text, the footer and
-	// the Apple configuration profile.
-	Name string `example:"\"Example VPN\"" koanf:"name"`
+	// the Apple configuration profile, shown as written. Control
+	// characters are refused.
+	Name PlainText `example:"\"Example VPN\"" koanf:"name"`
 
 	// Logo is the image at the top of every page: an `http://` or
 	// `https://` URL, or a path on this server such as a file in
@@ -928,8 +1036,9 @@ type WebThemeConfig struct {
 	Stylesheets []WebURL `example:"[\"/static/brand.css\"]" koanf:"stylesheets"`
 
 	// FooterText is a line of plain text shown at the bottom of every
-	// page, above the "Powered by Headscale" link.
-	FooterText string `example:"\"Operated by the Example IT team\"" koanf:"footer_text"`
+	// page, above the "Powered by Headscale" link. Control characters are
+	// refused.
+	FooterText PlainText `example:"\"Operated by the Example IT team\"" koanf:"footer_text"`
 
 	// HidePoweredBy removes the "Powered by Headscale" link from the
 	// footer.
@@ -946,6 +1055,87 @@ func DefaultWebTheme() WebThemeConfig {
 			"https://fonts.googleapis.com/css2?family=Roboto:wght@300..700",
 			"https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap",
 		},
+	}
+}
+
+// DefaultWebText is the built-in text of the pages.
+func DefaultWebText() WebTextConfig {
+	return WebTextConfig{
+		AuthWeb: WebAuthWebText{
+			Register: WebCommandText{
+				Title:       "Node registration",
+				Description: "Run the command below in the headscale server to add this node to your network:",
+			},
+			Auth: WebCommandText{
+				Title:       "Authentication check",
+				Description: "Run the command below in the headscale server to approve this authentication request:",
+			},
+		},
+		AuthSuccess: WebAuthSuccessText{
+			Register: WebSuccessText{
+				Title: "Node Registered", Heading: "Node registered", Verb: "Registered",
+				Message: "You can now close this window.",
+			},
+			Reauth: WebSuccessText{
+				Title: "Node Reauthenticated", Heading: "Node reauthenticated", Verb: "Reauthenticated",
+				Message: "You can now close this window.",
+			},
+			SSH: WebSuccessText{
+				Title: "SSH Session Authorized", Heading: "SSH session authorized", Verb: "Authorized",
+				Message: "You may return to your terminal.",
+			},
+		},
+		AuthError: WebAuthErrorText{
+			Title: "Error",
+			Unauthorized: WebErrorText{
+				Heading: "Access denied",
+				Message: "You are not authorized. Please contact your administrator.",
+			},
+			Expired: WebErrorText{
+				Heading: "Session expired",
+				Message: "Your session has expired. Please try again.",
+			},
+			BadRequest: WebErrorText{
+				Heading: "Request not accepted",
+				Message: "The request could not be processed. Please try again.",
+			},
+			ServerError: WebErrorText{
+				Heading: "Something went wrong",
+				Message: "Something went wrong. Please try again later.",
+			},
+			LinkSpent: WebErrorText{
+				Heading: "Link already used",
+				Message: "This link has already been used or has expired. " +
+					"If your device is connected you are done; otherwise start the login again.",
+			},
+			NodeReportTooLarge: WebErrorText{
+				Heading: "Device report too large",
+				Message: "This device reports too much data. " +
+					"Ask your administrator to reduce its reported metadata, then sign in again.",
+			},
+		},
+	}
+}
+
+// WithDefaults returns t with every empty text taken from
+// [DefaultWebText], for a configuration built in Go rather than loaded.
+func (t WebTextConfig) WithDefaults() WebTextConfig {
+	fillPageText(reflect.ValueOf(&t).Elem(), reflect.ValueOf(DefaultWebText()))
+
+	return t
+}
+
+// fillPageText sets each empty PageText in dst, a struct, to the one in
+// def, a struct of the same type.
+func fillPageText(dst, def reflect.Value) {
+	for i := range dst.NumField() {
+		f := dst.Field(i)
+		switch {
+		case f.Kind() == reflect.Struct:
+			fillPageText(f, def.Field(i))
+		case f.Type() == reflect.TypeFor[PageText]() && f.String() == "":
+			f.Set(def.Field(i))
+		}
 	}
 }
 

@@ -1004,7 +1004,7 @@ in
         type = lib.types.str;
         default = "Headscale";
         description = ''
-          The product name in page titles, page text, the footer and the Apple configuration profile.
+          The product name in page titles, page text, the footer and the Apple configuration profile, shown as written. Control characters are refused.
         '';
         example = "Example VPN";
       };
@@ -1083,7 +1083,7 @@ in
         type = lib.types.str;
         default = "";
         description = ''
-          A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link.
+          A line of plain text shown at the bottom of every page, above the "Powered by Headscale" link. Control characters are refused.
         '';
         example = "Operated by the Example IT team";
       };
@@ -1094,6 +1094,268 @@ in
           Removes the "Powered by Headscale" link from the footer.
         '';
         example = true;
+      };
+    };
+    text = {
+      auth_web = {
+        register = {
+          title = lib.mkOption {
+            type = lib.types.str;
+            default = "Node registration";
+            description = ''
+              The page title and heading.
+            '';
+            example = "Add a device to {name}";
+          };
+          description = lib.mkOption {
+            type = lib.types.str;
+            default = "Run the command below in the headscale server to add this node to your network:";
+            description = ''
+              Introduces the command.
+            '';
+            example = "Send this command to the IT team:";
+          };
+        };
+        auth = {
+          title = lib.mkOption {
+            type = lib.types.str;
+            default = "Authentication check";
+            description = ''
+              The page title and heading.
+            '';
+            example = "Add a device to {name}";
+          };
+          description = lib.mkOption {
+            type = lib.types.str;
+            default = "Run the command below in the headscale server to approve this authentication request:";
+            description = ''
+              Introduces the command.
+            '';
+            example = "Send this command to the IT team:";
+          };
+        };
+      };
+      auth_success = {
+        register = {
+          title = lib.mkOption {
+            type = lib.types.str;
+            default = "Node Registered";
+            description = ''
+              The page title.
+            '';
+            example = "Welcome";
+          };
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Node registered";
+            description = ''
+              The text in the success box.
+            '';
+            example = "You are connected to {name}";
+          };
+          verb = lib.mkOption {
+            type = lib.types.str;
+            default = "Registered";
+            description = ''
+              The word before "as" and the user name.
+            '';
+            example = "Signed in";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "You can now close this window.";
+            description = ''
+              The sentence after the user name.
+            '';
+            example = "You can close this tab.";
+          };
+        };
+        reauth = {
+          title = lib.mkOption {
+            type = lib.types.str;
+            default = "Node Reauthenticated";
+            description = ''
+              The page title.
+            '';
+            example = "Welcome";
+          };
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Node reauthenticated";
+            description = ''
+              The text in the success box.
+            '';
+            example = "You are connected to {name}";
+          };
+          verb = lib.mkOption {
+            type = lib.types.str;
+            default = "Reauthenticated";
+            description = ''
+              The word before "as" and the user name.
+            '';
+            example = "Signed in";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "You can now close this window.";
+            description = ''
+              The sentence after the user name.
+            '';
+            example = "You can close this tab.";
+          };
+        };
+        ssh = {
+          title = lib.mkOption {
+            type = lib.types.str;
+            default = "SSH Session Authorized";
+            description = ''
+              The page title.
+            '';
+            example = "Welcome";
+          };
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "SSH session authorized";
+            description = ''
+              The text in the success box.
+            '';
+            example = "You are connected to {name}";
+          };
+          verb = lib.mkOption {
+            type = lib.types.str;
+            default = "Authorized";
+            description = ''
+              The word before "as" and the user name.
+            '';
+            example = "Signed in";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "You may return to your terminal.";
+            description = ''
+              The sentence after the user name.
+            '';
+            example = "You can close this tab.";
+          };
+        };
+      };
+      auth_error = {
+        title = lib.mkOption {
+          type = lib.types.str;
+          default = "Error";
+          description = ''
+            The page title of every error.
+          '';
+          example = "Sign-in problem";
+        };
+        unauthorized = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Access denied";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "You are not authorized. Please contact your administrator.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
+        expired = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Session expired";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "Your session has expired. Please try again.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
+        bad_request = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Request not accepted";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "The request could not be processed. Please try again.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
+        server_error = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Something went wrong";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "Something went wrong. Please try again later.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
+        link_spent = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Link already used";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
+        node_report_too_large = {
+          heading = lib.mkOption {
+            type = lib.types.str;
+            default = "Device report too large";
+            description = ''
+              The bold text in the error box.
+            '';
+            example = "Something is not right";
+          };
+          message = lib.mkOption {
+            type = lib.types.str;
+            default = "This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.";
+            description = ''
+              Tells the user what to do next.
+            '';
+            example = "Contact the IT team at it@example.com.";
+          };
+        };
       };
     };
   };

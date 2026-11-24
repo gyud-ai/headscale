@@ -437,7 +437,7 @@ web:
   # templates.
   theme:
     # The product name in page titles, page text, the footer and the Apple
-    # configuration profile.
+    # configuration profile, shown as written. Control characters are refused.
     name: Headscale
     # The image at the top of every page: an `http://` or `https://` URL, or a
     # path on this server such as a file in `web.static_dir`. Empty shows no
@@ -472,10 +472,106 @@ web:
     # `web.static_dir`.
     stylesheets: []
     # A line of plain text shown at the bottom of every page, above the "Powered
-    # by Headscale" link.
+    # by Headscale" link. Control characters are refused.
     footer_text: ""
     # Removes the "Powered by Headscale" link from the footer.
     hide_powered_by: false
+  # The text headscale picks for a page, such as the heading of an error page,
+  # set without writing templates. Each value is one line of plain text, shown
+  # as written; `{name}` in it is replaced by `web.theme.name`. A blank value,
+  # control characters, more than 500 characters and any other `{...}` are
+  # refused. Leave a key out to keep the built-in text.
+  text:
+    # The page that shows an administrator the command that approves a request,
+    # when OpenID Connect is off.
+    auth_web:
+      # `/register/{id}`: a new node waiting to be added.
+      register:
+        # The page title and heading.
+        title: Node registration
+        # Introduces the command.
+        description: 'Run the command below in the headscale server to add this node to your network:'
+      # `/auth/{id}`: an auth request waiting for approval.
+      auth:
+        # The page title and heading.
+        title: Authentication check
+        # Introduces the command.
+        description: 'Run the command below in the headscale server to approve this authentication request:'
+    # The page shown after an OpenID Connect login.
+    auth_success:
+      # A new node registered.
+      register:
+        # The page title.
+        title: Node Registered
+        # The text in the success box.
+        heading: Node registered
+        # The word before "as" and the user name.
+        verb: Registered
+        # The sentence after the user name.
+        message: You can now close this window.
+      # An existing node logged in again.
+      reauth:
+        # The page title.
+        title: Node Reauthenticated
+        # The text in the success box.
+        heading: Node reauthenticated
+        # The word before "as" and the user name.
+        verb: Reauthenticated
+        # The sentence after the user name.
+        message: You can now close this window.
+      # An SSH session that a check rule held, now approved.
+      ssh:
+        # The page title.
+        title: SSH Session Authorized
+        # The text in the success box.
+        heading: SSH session authorized
+        # The word before "as" and the user name.
+        verb: Authorized
+        # The sentence after the user name.
+        message: You may return to your terminal.
+    # The page shown when a browser step of a login fails.
+    auth_error:
+      # The page title of every error.
+      title: Error
+      # A 401 or 403: the user may not do this, for example a login outside
+      # `oidc.allowed_domains`.
+      unauthorized:
+        # The bold text in the error box.
+        heading: Access denied
+        # Tells the user what to do next.
+        message: You are not authorized. Please contact your administrator.
+      # A 410: the login took too long and its session expired.
+      expired:
+        # The bold text in the error box.
+        heading: Session expired
+        # Tells the user what to do next.
+        message: Your session has expired. Please try again.
+      # Another 4xx: the request could not be used, for example a login link
+      # that was cut short.
+      bad_request:
+        # The bold text in the error box.
+        heading: Request not accepted
+        # Tells the user what to do next.
+        message: The request could not be processed. Please try again.
+      # A 5xx: headscale failed or is busy.
+      server_error:
+        # The bold text in the error box.
+        heading: Something went wrong
+        # Tells the user what to do next.
+        message: Something went wrong. Please try again later.
+      # A 410 for a registration link that was already used, usually a reload
+      # after the user confirmed.
+      link_spent:
+        # The bold text in the error box.
+        heading: Link already used
+        # Tells the user what to do next.
+        message: This link has already been used or has expired. If your device is connected you are done; otherwise start the login again.
+      # A 400 for a device whose report to headscale is over the size limit.
+      node_report_too_large:
+        # The bold text in the error box.
+        heading: Device report too large
+        # Tells the user what to do next.
+        message: This device reports too much data. Ask your administrator to reduce its reported metadata, then sign in again.
 
 # How the headscale CLI reaches the server: the local `unix_socket` without
 # authentication, or a remote `cli.address` with `cli.api_key`. The CLI reads

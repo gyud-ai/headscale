@@ -17,9 +17,11 @@ import (
 	"io"
 	"io/fs"
 	"maps"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,7 +33,17 @@ import (
 //go:embed html/*.html
 var builtinFiles embed.FS
 
-var errNotDir = errors.New("is not a directory")
+var (
+	errNotDir         = errors.New("is not a directory")
+	errLogoDarkNoLogo = errors.New("needs web.theme.logo: the dark logo replaces it")
+)
+
+// builtinLogo and builtinLogoDark are the files of the built-in logo under
+// [StaticPrefix]: one for a light colour scheme, one for a dark one.
+const (
+	builtinLogo     = "headscale.svg"
+	builtinLogoDark = "headscale-dark.svg"
+)
 
 // Builtin is the built-in template files, the starting point for a
 // web.templates_dir.
@@ -53,6 +65,11 @@ type Site struct {
 
 	// Logo is web.theme.logo, a URL; empty shows no logo.
 	Logo string
+
+	// LogoDark is the logo for a dark colour scheme: web.theme.logo_dark,
+	// or the built-in dark logo with the built-in logo. Empty uses Logo.
+	// Commas and whitespace are percent-encoded, for a srcset attribute.
+	LogoDark string
 
 	// ServerURL is server_url, which clients log in to.
 	ServerURL string
@@ -390,9 +407,10 @@ type themeCheck struct {
 func newSite(cfg *types.Config) (*Site, error) {
 	theme := cfg.Web.Theme
 
-	checks := make([]themeCheck, 0, 5+len(theme.FontStylesheets)+len(theme.Stylesheets)) //nolint:mnd // the five below
+	checks := make([]themeCheck, 0, 6+len(theme.FontStylesheets)+len(theme.Stylesheets)) //nolint:mnd // the six below
 	checks = append(checks,
 		themeCheck{"logo", string(theme.Logo), new(types.WebURL)},
+		themeCheck{"logo_dark", string(theme.LogoDark), new(types.WebURL)},
 		themeCheck{"primary_color", string(theme.PrimaryColor), new(types.CSSColor)},
 		themeCheck{"primary_color_dark", string(theme.PrimaryColorDark), new(types.CSSColor)},
 		themeCheck{"font_family", string(theme.FontFamily), new(types.FontFamily)},
@@ -414,6 +432,10 @@ func newSite(cfg *types.Config) (*Site, error) {
 		}
 	}
 
+	if theme.LogoDark != "" && theme.Logo == "" {
+		return nil, fmt.Errorf("web.theme.logo_dark %q: %w", theme.LogoDark, errLogoDarkNoLogo)
+	}
+
 	urls := func(us []types.WebURL) []string {
 		out := make([]string, len(us))
 		for i, u := range us {
@@ -426,6 +448,7 @@ func newSite(cfg *types.Config) (*Site, error) {
 	return &Site{
 		Name:             cmp.Or(theme.Name, types.DefaultWebTheme().Name),
 		Logo:             string(theme.Logo),
+		LogoDark:         logoDark(cfg),
 		ServerURL:        cfg.ServerURL,
 		PrimaryColor:     string(theme.PrimaryColor),
 		PrimaryColorDark: string(theme.PrimaryColorDark),
@@ -438,6 +461,36 @@ func newSite(cfg *types.Config) (*Site, error) {
 		ProfileFileName:  profileFileName(cmp.Or(theme.Name, types.DefaultWebTheme().Name)),
 		ThemeCSS:         themeCSS(theme),
 	}, nil
+}
+
+// srcsetEscaper percent-encodes the characters that split a srcset
+// attribute into candidates, so a URL with them stays one URL; a server
+// reads the encoded URL the same.
+var srcsetEscaper = strings.NewReplacer(",", "%2C", " ", "%20", "\t", "%09", "\n", "%0A", "\r", "%0D", "\f", "%0C")
+
+// logoDark is the logo of cfg for a dark colour scheme: logo_dark, else
+// the built-in dark logo when logo is the built-in one. A web.static_dir
+// that replaces headscale.svg without a headscale-dark.svg keeps its
+// logo in both schemes.
+func logoDark(cfg *types.Config) string {
+	theme := cfg.Web.Theme
+	if theme.LogoDark != "" || theme.Logo != types.DefaultWebTheme().Logo {
+		return srcsetEscaper.Replace(string(theme.LogoDark))
+	}
+
+	if dir := cfg.Web.StaticDir; dir != "" {
+		has := func(name string) bool {
+			_, err := os.Stat(filepath.Join(cfg.AbsPath(dir), name))
+
+			return err == nil
+		}
+
+		if has(builtinLogo) && !has(builtinLogoDark) {
+			return ""
+		}
+	}
+
+	return StaticPrefix + builtinLogoDark
 }
 
 // profileFileName turns a site name into a file name for the macOS
@@ -472,13 +525,21 @@ func profileFileName(name string) string {
 // later in the page wins over the built-in light and dark ones alike, so
 // a primary colour without a dark one applies to both schemes.
 func themeCSS(theme types.WebThemeConfig) template.CSS {
-	// The hover colour is the primary colour mixed with white, so links
-	// and buttons still change colour on hover.
+	// The text on the primary colour is black or white, whichever
+	// contrasts more. The hover colour is the primary colour mixed with
+	// the other one, so links and buttons still change colour on hover and
+	// the button text contrasts more on hover, not less.
 	colors := func(c types.CSSColor) []string {
+		on, away := "#ffffff", "black"
+		if !whiteOn(string(c)) {
+			on, away = "#000000", "white"
+		}
+
 		return []string{
 			"--md-primary-fg-color:" + string(c),
-			"--md-accent-fg-color:color-mix(in srgb," + string(c) + " 80%,white)",
+			"--md-accent-fg-color:color-mix(in srgb," + string(c) + " 80%," + away + ")",
 			"--hs-focus-ring:" + string(c),
+			"--hs-on-primary:" + on,
 		}
 	}
 
@@ -505,6 +566,44 @@ func themeCSS(theme types.WebThemeConfig) template.CSS {
 	}
 
 	return template.CSS(b.String()) //nolint:gosec // G203: built from validated colours and font lists only
+}
+
+// whiteOn reports whether white text contrasts more than black on the
+// hex colour c, by the WCAG contrast ratio. The alpha of #rgba and
+// #rrggbbaa is ignored: what shows through is not known here. One of
+// the two is always at least 4.5:1, the WCAG minimum for text.
+func whiteOn(c string) bool {
+	l := luminance(c)
+
+	return 1.05/(l+0.05) >= (l+0.05)/0.05 //nolint:mnd // WCAG contrast ratio with white (1) and black (0)
+}
+
+// luminance is the WCAG relative luminance of the hex colour c, 0 for
+// black to 1 for white. c has been validated as a CSSColor.
+func luminance(c string) float64 {
+	hex := strings.TrimPrefix(c, "#")
+	if len(hex) <= 4 { //nolint:mnd // #rgb and #rgba
+		var b strings.Builder
+		for _, r := range hex {
+			b.WriteRune(r)
+			b.WriteRune(r)
+		}
+
+		hex = b.String()
+	}
+
+	channel := func(i int) float64 {
+		v, _ := strconv.ParseUint(hex[i:i+2], 16, 8)
+
+		s := float64(v) / 255 //nolint:mnd // 8-bit channel
+		if s <= 0.04045 {     //nolint:mnd // sRGB transfer function
+			return s / 12.92 //nolint:mnd // sRGB transfer function
+		}
+
+		return math.Pow((s+0.055)/1.055, 2.4) //nolint:mnd // sRGB transfer function
+	}
+
+	return 0.2126*channel(0) + 0.7152*channel(2) + 0.0722*channel(4) //nolint:mnd // WCAG luminance weights
 }
 
 func (r *Renderer) render(name string, page any) ([]byte, error) {

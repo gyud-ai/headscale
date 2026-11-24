@@ -224,6 +224,7 @@ func Validate(c *types.Config) error {
 	validateDatabase(c, v)
 	validatePolicy(c, v)
 	validateLog(c, v)
+	validateWeb(c, v)
 	validateMagicDNS(c, v)
 	validateBaseDomain(c, v)
 	validateCertificates(c, v)
@@ -372,6 +373,19 @@ func validateLog(c *types.Config, v *configValidator) {
 			Current: []types.KV{{Key: "log.format", Value: string(f)}},
 			Allowed: f.Allowed(),
 			Hint:    "pick one of the allowed values; text is the default",
+		})
+	}
+}
+
+// validateWeb records a ConfigError for a dark logo without a logo: the
+// dark logo only replaces the logo, so there would be nothing to show in
+// a light colour scheme.
+func validateWeb(c *types.Config, v *configValidator) {
+	if t := c.Web.Theme; t.LogoDark != "" && t.Logo == "" {
+		v.Add(&types.ConfigError{
+			Reason:  "web.theme.logo_dark is set without web.theme.logo",
+			Current: []types.KV{{Key: "web.theme.logo_dark", Value: string(t.LogoDark)}, {Key: "web.theme.logo", Value: ""}},
+			Hint:    "set web.theme.logo too, or remove web.theme.logo_dark",
 		})
 	}
 }

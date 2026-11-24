@@ -443,6 +443,11 @@ web:
     # path on this server such as a file in `web.static_dir`. Empty shows no
     # logo.
     logo: /static/headscale.svg
+    # Replaces `web.theme.logo` when the browser asks for a dark colour scheme,
+    # as `web.theme.primary_color_dark` does for the colour. Needs
+    # `web.theme.logo`. Empty uses `web.theme.logo` for both, except that the
+    # built-in logo has a built-in dark version.
+    logo_dark: ""
     # The colour of links, buttons and focus rings, as `#rrggbb`. Empty keeps
     # the built-in blue.
     primary_color: ""

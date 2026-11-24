@@ -1,11 +1,14 @@
 package templates
 
 import (
+	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -182,8 +185,8 @@ func TestTheme(t *testing.T) {
 	assert.Contains(t, html, `<link rel="stylesheet" href="/static/fonts.css">`)
 	assert.Contains(t, html, `<link rel="stylesheet" href="https://cdn.example.com/brand.css">`)
 	assert.NotContains(t, html, "fonts.googleapis.com")
-	assert.Contains(t, html, `<style>:root{--md-primary-fg-color:#0a7d5a;--md-accent-fg-color:color-mix(in srgb,#0a7d5a 80%,white);--hs-focus-ring:#0a7d5a;--md-text-font:"Inter", sans-serif;--md-code-font:monospace}`+
-		`@media (prefers-color-scheme: dark){:root{--md-primary-fg-color:#4fd1a5;--md-accent-fg-color:color-mix(in srgb,#4fd1a5 80%,white);--hs-focus-ring:#4fd1a5}}</style>`)
+	assert.Contains(t, html, `<style>:root{--md-primary-fg-color:#0a7d5a;--md-accent-fg-color:color-mix(in srgb,#0a7d5a 80%,black);--hs-focus-ring:#0a7d5a;--hs-on-primary:#ffffff;--md-text-font:"Inter", sans-serif;--md-code-font:monospace}`+
+		`@media (prefers-color-scheme: dark){:root{--md-primary-fg-color:#4fd1a5;--md-accent-fg-color:color-mix(in srgb,#4fd1a5 80%,white);--hs-focus-ring:#4fd1a5;--hs-on-primary:#000000}}</style>`)
 	assert.Contains(t, html, "<p>Run by &lt;IT&gt;</p>")
 	assert.NotContains(t, html, "Powered by")
 	assert.Equal(t, "Example VPN", r.Name())
@@ -222,6 +225,54 @@ func TestThemeNoLogo(t *testing.T) {
 	assert.Contains(t, html, "<title>Windows - X</title>")
 }
 
+func TestThemeLogoDark(t *testing.T) {
+	picture := func(dark, light, name string) string {
+		return `<picture><source srcset="` + dark + `" media="(prefers-color-scheme: dark)">` +
+			`<img class="headscale-logo" src="` + light + `" alt="` + name + `"></picture>`
+	}
+
+	t.Run("configured", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{Theme: types.WebThemeConfig{
+			Name: "X", Logo: "/static/logo.svg", LogoDark: "https://cdn.example.com/logo-dark.svg",
+		}})
+		assert.Contains(t, mustRender(t)(r.Windows()), picture("https://cdn.example.com/logo-dark.svg", "/static/logo.svg", "X"))
+	})
+
+	t.Run("built-in logo has a built-in dark one", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{})
+		assert.Contains(t, mustRender(t)(r.Windows()), picture("/static/headscale-dark.svg", "/static/headscale.svg", "Headscale"))
+	})
+
+	t.Run("own logo without a dark one", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{Theme: types.WebThemeConfig{Name: "X", Logo: "/static/logo.svg"}})
+		html := mustRender(t)(r.Windows())
+		assert.NotContains(t, html, "<picture>")
+		assert.Contains(t, html, `<img class="headscale-logo" src="/static/logo.svg" alt="X">`)
+	})
+
+	t.Run("static_dir replaces headscale.svg only", func(t *testing.T) {
+		dir := writeFiles(t, map[string]string{"headscale.svg": "<svg/>"})
+		r := newTestRenderer(t, types.WebConfig{StaticDir: dir})
+		html := mustRender(t)(r.Windows())
+		assert.NotContains(t, html, "<picture>", "the replaced logo shows in both schemes")
+		assert.Contains(t, html, `<img class="headscale-logo" src="/static/headscale.svg" alt="Headscale">`)
+	})
+
+	t.Run("static_dir replaces both", func(t *testing.T) {
+		dir := writeFiles(t, map[string]string{"headscale.svg": "<svg/>", "headscale-dark.svg": "<svg/>"})
+		r := newTestRenderer(t, types.WebConfig{StaticDir: dir})
+		assert.Contains(t, mustRender(t)(r.Windows()), picture("/static/headscale-dark.svg", "/static/headscale.svg", "Headscale"))
+	})
+
+	t.Run("srcset keeps a URL with a comma and a space whole", func(t *testing.T) {
+		r := newTestRenderer(t, types.WebConfig{Theme: types.WebThemeConfig{
+			Name: "X", Logo: "/static/logo.svg", LogoDark: "/static/a,b c.svg",
+		}})
+		html := mustRender(t)(r.Windows())
+		assert.Contains(t, html, `<source srcset="/static/a%2Cb%20c.svg" media`)
+	})
+}
+
 // TestThemeRejectsInvalid: a theme built in Go skips the loader's checks;
 // New must refuse what would break out of the stylesheet or the page.
 func TestThemeRejectsInvalid(t *testing.T) {
@@ -231,6 +282,8 @@ func TestThemeRejectsInvalid(t *testing.T) {
 		"font":       {FontFamily: "x</style><script>"},
 		"code font":  {CodeFontFamily: "x;y"},
 		"logo":       {Logo: "javascript:alert(1)"},
+		"dark logo":  {Logo: "/static/logo.svg", LogoDark: "javascript:alert(1)"},
+		"dark only":  {LogoDark: "/static/logo-dark.svg"},
 		"stylesheet": {Stylesheets: []types.WebURL{"//evil.example.com/x.css"}},
 		"font sheet": {FontStylesheets: []types.WebURL{"fonts.css"}},
 	} {
@@ -486,6 +539,7 @@ func TestStatic(t *testing.T) {
 		{"/static/brand/logo.svg", http.StatusOK, "<svg/>", "image/svg+xml"},
 		{"/static/fonts/a.woff2", http.StatusOK, "font", "font/woff2"},
 		{"/static/headscale.svg", http.StatusOK, "<svg", "image/svg+xml"},
+		{"/static/headscale-dark.svg", http.StatusOK, "<svg", "image/svg+xml"},
 		{"/static/favicon.png", http.StatusOK, "", "image/png"},
 		{"/static/", http.StatusNotFound, "", ""},
 		{"/static/brand", http.StatusNotFound, "", ""},
@@ -572,6 +626,96 @@ func TestStyleVariables(t *testing.T) {
 		CodeFontFamily:   "monospace",
 	})
 	assert.Empty(t, undeclared(`(--[\w-]+):`, string(theme)), "the theme sets variables style.css does not declare")
+}
+
+// contrast is the WCAG contrast ratio of two hex colours.
+func contrast(a, b string) float64 {
+	la, lb := luminance(a), luminance(b)
+
+	return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+}
+
+// mix is CSS color-mix(in srgb, a p, b) of two #rrggbb colours.
+func mix(a string, p float64, b string) string {
+	ch := func(c string, i int) float64 {
+		v, err := strconv.ParseUint(c[1+i:3+i], 16, 8)
+		if err != nil {
+			panic(err)
+		}
+
+		return float64(v)
+	}
+
+	m := func(i int) int { return int(math.Round(ch(a, i)*p + ch(b, i)*(1-p))) }
+
+	return fmt.Sprintf("#%02x%02x%02x", m(0), m(2), m(4))
+}
+
+func TestLuminance(t *testing.T) {
+	assert.InDelta(t, 0, luminance("#000"), 1e-9)
+	assert.InDelta(t, 1, luminance("#ffffff"), 1e-9)
+	assert.InDelta(t, luminance("#abc"), luminance("#aabbcc"), 1e-9)
+	assert.InDelta(t, luminance("#aabbcc"), luminance("#aabbcc80"), 1e-9, "alpha is ignored")
+	assert.InDelta(t, 21, contrast("#000000", "#ffffff"), 1e-9)
+
+	// Measured by salvs03 on #1: Catppuccin Mocha mauve with white text
+	// is about 2:1, the built-in dark blue about 3.1:1.
+	assert.InDelta(t, 2.0, contrast("#cba6f7", "#ffffff"), 0.05)
+	assert.InDelta(t, 3.1, contrast("#7b8fdb", "#ffffff"), 0.05)
+}
+
+// TestOnPrimary checks that the button text the theme picks contrasts at
+// least 4.5:1, the WCAG minimum for text, with the primary colour and
+// with the hover colour mixed from it.
+func TestOnPrimary(t *testing.T) {
+	colours := []string{
+		"#000000", "#ffffff", "#808080", "#767676", "#777777",
+		"#4051b5", "#7b8fdb", "#0a7d5a", "#4fd1a5", "#8839ef", "#cba6f7",
+		"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff",
+	}
+	for v := 0; v < 256; v += 15 {
+		colours = append(colours, fmt.Sprintf("#%02x%02x%02x", v, 255-v, v/2))
+	}
+
+	for _, c := range colours {
+		on, away := "#ffffff", "#000000"
+		if !whiteOn(c) {
+			on, away = "#000000", "#ffffff"
+		}
+
+		assert.GreaterOrEqual(t, contrast(c, on), 4.5, "%s with %s", c, on)
+		assert.GreaterOrEqual(t, contrast(mix(c, 0.8, away), on), contrast(c, on), "%s: hover contrasts less", c)
+
+		css := string(themeCSS(types.WebThemeConfig{PrimaryColor: types.CSSColor(c)}))
+		assert.Contains(t, css, "--hs-on-primary:"+on, c)
+		assert.Contains(t, css, "80%,"+map[string]string{"#000000": "black", "#ffffff": "white"}[away]+")", c)
+	}
+
+	assert.False(t, whiteOn("#cba6f7"), "Catppuccin Mocha mauve takes black text")
+	assert.True(t, whiteOn("#8839ef"), "Catppuccin Latte mauve takes white text")
+}
+
+// TestOnPrimaryBuiltin checks the built-in button text against the
+// built-in primary colour in style.css, light and dark.
+func TestOnPrimaryBuiltin(t *testing.T) {
+	b, err := assets.Static.ReadFile("style.css")
+	require.NoError(t, err)
+
+	light, dark, ok := strings.Cut(string(b), "@media (prefers-color-scheme: dark)")
+	require.True(t, ok)
+
+	value := func(css, name string) string {
+		m := regexp.MustCompile(regexp.QuoteMeta(name) + `:\s*(#[0-9a-f]{6});`).FindStringSubmatch(css)
+		require.NotNil(t, m, name)
+
+		return m[1]
+	}
+
+	for scheme, css := range map[string]string{"light": light, "dark": dark} {
+		primary, on := value(css, "--md-primary-fg-color"), value(css, "--hs-on-primary")
+		assert.GreaterOrEqual(t, contrast(primary, on), 4.5, "%s: %s on %s", scheme, on, primary)
+		assert.Equal(t, whiteOn(primary), on == "#ffffff", "%s: the theme would pick the other text colour", scheme)
+	}
 }
 
 func TestFaviconOverride(t *testing.T) {

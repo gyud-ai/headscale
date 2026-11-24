@@ -10,10 +10,5 @@
 {{template "icon_success"}}
 <div><strong class="hs-box__heading">{{.Page.Heading}}</strong>{{.Page.Verb}} as <strong>{{.Page.User}}</strong>. {{.Page.Message}}</div>
 </div>
-<h2>Getting started</h2>
-<p>Check out the documentation to learn more about headscale and Tailscale:</p>
-<ul>
-<li><a href="https://headscale.net/stable/" rel="noreferrer noopener" target="_blank">Headscale documentation</a></li>
-<li><a href="https://tailscale.com/docs" rel="noreferrer noopener" target="_blank">Tailscale docs</a></li>
-</ul>
+{{template "getting_started" .}}
 {{- end}}

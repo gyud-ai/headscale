@@ -5,3 +5,7 @@ docs/
 hscontrol/testdata/
 hscontrol/config/testdata/bad/
 hscontrol/config/testdata/compat/
+
+# Go html/template files: prettier would rewrite the {{- ... -}} whitespace
+# trimming the pages rely on.
+hscontrol/templates/html/

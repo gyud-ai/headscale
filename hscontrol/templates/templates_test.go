@@ -92,6 +92,9 @@ func TestBuiltinPages(t *testing.T) {
 	assert.Contains(t, pages["windows"], "tailscale login --login-server https://hs.example.com")
 	assert.Contains(t, pages["success"], "Registered as <strong>alice</strong>. Done.")
 	assert.Contains(t, pages["success"], `id="checkbox"`)
+	assert.Contains(t, pages["success"], "<h2>Getting started</h2>")
+	assert.Contains(t, pages["success"], `href="https://headscale.net/stable/"`)
+	assert.Equal(t, 2, strings.Count(pages["apple"], `download="headscale_macos.mobileconfig"`))
 	assert.Contains(t, pages["error"], `id="error-icon"`)
 	assert.Contains(t, pages["error"], `role="alert"`)
 	assert.Contains(t, pages["register confirm"], "<tr><td>Existing node</td><td>laptop</td></tr>")
@@ -177,11 +180,18 @@ func TestTheme(t *testing.T) {
 	assert.Contains(t, html, `<link rel="stylesheet" href="/static/fonts.css">`)
 	assert.Contains(t, html, `<link rel="stylesheet" href="https://cdn.example.com/brand.css">`)
 	assert.NotContains(t, html, "fonts.googleapis.com")
-	assert.Contains(t, html, `<style>:root{--md-primary-fg-color:#0a7d5a;--md-accent-fg-color:#0a7d5a;--hs-focus-ring:#0a7d5a;--md-text-font:"Inter", sans-serif;--md-code-font:monospace}`+
-		`@media (prefers-color-scheme: dark){:root{--md-primary-fg-color:#4fd1a5;--md-accent-fg-color:#4fd1a5;--hs-focus-ring:#4fd1a5}}</style>`)
+	assert.Contains(t, html, `<style>:root{--md-primary-fg-color:#0a7d5a;--md-accent-fg-color:color-mix(in srgb,#0a7d5a 80%,white);--hs-focus-ring:#0a7d5a;--md-text-font:"Inter", sans-serif;--md-code-font:monospace}`+
+		`@media (prefers-color-scheme: dark){:root{--md-primary-fg-color:#4fd1a5;--md-accent-fg-color:color-mix(in srgb,#4fd1a5 80%,white);--hs-focus-ring:#4fd1a5}}</style>`)
 	assert.Contains(t, html, "<p>Run by &lt;IT&gt;</p>")
 	assert.NotContains(t, html, "Powered by")
 	assert.Equal(t, "Example VPN", r.Name())
+
+	apple := mustRender(t)(r.Apple())
+	assert.Equal(t, 2, strings.Count(apple, `download="example_vpn_macos.mobileconfig"`))
+
+	success := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Heading: "Node registered", Verb: "Registered", User: "alice"}))
+	assert.Contains(t, success, "Registered as <strong>alice</strong>.")
+	assert.NotContains(t, success, "Getting started", "hide_powered_by hides the headscale links")
 
 	// Order: fonts, then the built-in stylesheet, the theme, then extras.
 	fonts := strings.Index(html, "/static/fonts.css")
@@ -259,6 +269,85 @@ func TestTemplateOverrides(t *testing.T) {
 	assert.NotContains(t, apple, "Powered by")
 	assert.Contains(t, apple, `<meta name="x" content="y">`)
 	assert.Contains(t, apple, "iOS configuration", "the built-in content stays")
+}
+
+// TestPageKinds: an override can word each case on its own, from Kind,
+// Code and AuthID rather than the built-in English text.
+func TestPageKinds(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"auth_success.html": `{{if eq .Page.Kind "reauth"}}welcome back{{else if eq .Page.Kind "ssh"}}ssh ok{{else}}registered{{end}}`,
+		"auth_error.html":   `{{if eq .Page.Code 410}}link used{{else}}error {{.Page.Code}}{{end}}`,
+		"auth_web.html":     `{{.Page.Kind}}:{{.Page.AuthID}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	for kind, want := range map[string]string{
+		AuthSuccessRegister: "registered",
+		AuthSuccessReauth:   "welcome back",
+		AuthSuccessSSH:      "ssh ok",
+	} {
+		assert.Equal(t, want, mustRender(t)(r.AuthSuccess(AuthSuccessResult{Kind: kind})), kind)
+	}
+
+	assert.Equal(t, "link used", mustRender(t)(r.AuthError(AuthErrorResult{Code: 410})))
+	assert.Equal(t, "error 403", mustRender(t)(r.AuthError(AuthErrorResult{Code: 403})))
+	assert.Equal(t, "auth:abc", mustRender(t)(r.AuthWeb(AuthWebData{Kind: AuthWebAuth, AuthID: "abc"})))
+}
+
+func TestGettingStartedOverride(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"brand.html": `{{define "getting_started"}}<p>Ask IT for help.</p>{{end}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
+	assert.Contains(t, html, "<p>Ask IT for help.</p>")
+	assert.NotContains(t, html, "Getting started")
+}
+
+// TestOldComponentsOverride: a components.html copied from an older
+// version, without getting_started, still loads; its own icons win.
+func TestOldComponentsOverride(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"components.html": `{{define "icon_success"}}<i>ok</i>{{end}}{{define "icon_error"}}<i>x</i>{{end}}{{define "icon_warning"}}<i>!</i>{{end}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
+	assert.Contains(t, html, "<i>ok</i>")
+	assert.NotContains(t, html, `id="checkbox"`)
+	assert.Contains(t, html, "<h2>Getting started</h2>", "the built-in getting_started fills in")
+}
+
+// TestRemoveBlock: an empty definition does not replace a block, as in
+// text/template; one holding an HTML comment does, and renders nothing.
+func TestRemoveBlock(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"brand.html": `{{define "getting_started"}}<!-- none -->{{end}}`,
+	})
+
+	r := newTestRenderer(t, types.WebConfig{TemplatesDir: dir})
+
+	html := mustRender(t)(r.AuthSuccess(AuthSuccessResult{Verb: "Registered", User: "alice"}))
+	assert.NotContains(t, html, "Getting started")
+	assert.NotContains(t, html, "none")
+}
+
+func TestProfileFileName(t *testing.T) {
+	for name, want := range map[string]string{
+		"Headscale":         "headscale_macos.mobileconfig",
+		"Example VPN":       "example_vpn_macos.mobileconfig",
+		"  ACME -- Corp! 2": "acme_corp_2_macos.mobileconfig",
+		"Café Réseau":       "caf_r_seau_macos.mobileconfig",
+		"":                  "headscale_macos.mobileconfig",
+		"!!!":               "headscale_macos.mobileconfig",
+		"Ωμέγα":             "headscale_macos.mobileconfig",
+	} {
+		assert.Equal(t, want, profileFileName(name), "%q", name)
+	}
 }
 
 func TestLayoutOverride(t *testing.T) {
